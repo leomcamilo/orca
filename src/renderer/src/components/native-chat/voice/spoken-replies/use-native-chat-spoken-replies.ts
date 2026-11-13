@@ -21,8 +21,7 @@ import {
 import {
   systemSpokenReplySpeech,
   systemSpokenReplyVoices,
-  useSpokenReplyLine,
-  whenSystemVoicesListed
+  useSpokenReplyLine
 } from './spoken-reply-system-voice'
 
 export type NativeChatSpokenReplies = {
@@ -178,9 +177,8 @@ export function useSpokenReplyJournal(journalItems: readonly AgentJournalRenderI
       return
     }
     for (const cue of taken) {
-      const lines = spokenLines(cue, agentLabel)
-      whenSystemVoicesListed(() =>
-        speech?.say(sessionId, lines, spokenReplyVoiceFor(useAppStore.getState().settings?.voice))
+      speech?.say(sessionId, spokenLines(cue, agentLabel), () =>
+        spokenReplyVoiceFor(useAppStore.getState().settings?.voice)
       )
     }
   }, [sessionId, agentLabel, journalItems, quiet])

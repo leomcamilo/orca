@@ -21567,7 +21567,11 @@
         "handsFreeStop": "Stop listening for your turn",
         "handsFreeStart": "Listen for your turn",
         "handsFreeNeedsDictation": "Turn on dictation in Settings to listen for your turn",
-        "handsFreeHint": "Talk in turns without touching the keyboard. The microphone opens when {{agent}} has finished, your words are sent after a short pause, and the reply is read aloud. It stops after {{seconds}} seconds without speech."
+        "handsFreeHint": "Talk in turns without touching the keyboard. The microphone opens when {{agent}} has finished, and whatever it hears is sent to {{agent}} after a short pause, without asking. The reply is read aloud. It stops after {{seconds}} seconds without speech.",
+        "handsFreeUnheard": "Stopped listening: the microphone picked up sound but no words, twice",
+        "handsFreeOn": "Listening for your turn",
+        "handsFreeDisclosure": "What the microphone hears is sent to {{agent}} after each pause.",
+        "handsFreeStopShort": "Stop listening"
       }
     },
     "tab": {

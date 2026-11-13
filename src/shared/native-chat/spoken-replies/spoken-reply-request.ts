@@ -2,7 +2,8 @@ import type { NativeChatBlock } from '../native-chat-types'
 
 // The opening alone identifies the note, so its wording can change without stranding saved rows.
 const SPOKEN_REPLY_REQUEST_OPENING = '\n\n[Orca Voice mode: '
-const SPOKEN_REPLY_REQUEST_PATTERN = /\n\n\[Orca Voice mode: [^\n]*\]$/
+// A reader may hand the message over with a newline or space after it.
+const SPOKEN_REPLY_REQUEST_PATTERN = /\n\n\[Orca Voice mode: [^\n]*\]\s*$/
 
 const SPOKEN_REPLY_REQUEST = `${SPOKEN_REPLY_REQUEST_OPENING}I will hear your reply read aloud instead of reading it. Begin your final reply with one short paragraph of at most three sentences that makes sense by ear alone: plain spoken words in the language I am writing in, with no markdown, lists, code, file paths or URLs. Say the result first, then anything I must know or decide. After that paragraph, write the full detail as you normally would; it stays on screen.]`
 

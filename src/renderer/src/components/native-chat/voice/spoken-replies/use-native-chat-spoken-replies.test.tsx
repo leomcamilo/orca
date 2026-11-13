@@ -6,7 +6,12 @@ import { getDefaultSettings, getDefaultVoiceSettings } from '../../../../../../s
 import type { AgentJournalRenderItem } from '../../../../../../shared/agent-session/journal/agent-session-journal-types'
 import { holdVoiceCallPresence } from '../voice-call-presence'
 import { NativeChatSpokenRepliesProvider } from './NativeChatSpokenRepliesProvider'
-import { setSpokenReplyMode, spokenReplyRequestedFor } from './spoken-reply-mode'
+import {
+  setHandsFreeMode,
+  setSpokenReplyMode,
+  spokenReplyRequestedFor,
+  useSpokenReplyMode
+} from './spoken-reply-mode'
 import {
   useNativeChatSpokenRepliesControl,
   useSpokenReplyJournal
@@ -147,16 +152,27 @@ it('reads a finished reply in the chosen language, quiets on request, and stays 
   expect(spokenTexts()).toHaveLength(2)
 })
 
-it('waits for the system to list its voices before the first reply', () => {
+it('counts a reply that waits for the system voices as speech, and drops it when the mode goes off', () => {
   visible.current = true
   system.voices = []
   const { result, answer } = renderChat()
   act(() => result.current?.toggle())
   answer('t1', 'Pronto.')
   expect(spokenTexts()).toEqual([])
+  // Hands-free reads this line to keep the microphone closed.
+  expect(result.current?.line).toBe('Pronto.')
   system.voices = [LUCIANA]
   act(() => system.voicesListed?.())
   expect(system.spoken).toMatchObject([{ text: 'Pronto.', voice: LUCIANA, lang: 'pt-BR' }])
+
+  system.voices = []
+  act(() => system.spoken[0].onend?.())
+  answer('t2', 'Tarde demais.')
+  expect(result.current?.line).toBe('Tarde demais.')
+  act(() => result.current?.toggle())
+  system.voices = [LUCIANA]
+  act(() => system.voicesListed?.())
+  expect(spokenTexts()).toEqual(['Pronto.'])
 })
 
 it('stays silent while a Voice mode call in any chat holds the microphone', () => {
@@ -180,4 +196,14 @@ it('reads nothing for a chat that is not on screen', () => {
   act(() => setSpokenReplyMode('chat-1', true))
   answer('t1', 'Ninguém vê este chat.')
   expect(spokenTexts()).toEqual([])
+})
+
+it('lets one chat at a time listen for the person, and stops listening when replies go quiet', () => {
+  setHandsFreeMode('chat-a', true)
+  setHandsFreeMode('chat-b', true)
+  expect(useSpokenReplyMode.getState().handsFree).toEqual({ 'chat-b': true })
+  expect(useSpokenReplyMode.getState().on).toEqual({ 'chat-a': true, 'chat-b': true })
+  setSpokenReplyMode('chat-b', false)
+  setSpokenReplyMode('chat-a', false)
+  expect(useSpokenReplyMode.getState()).toMatchObject({ on: {}, handsFree: {} })
 })

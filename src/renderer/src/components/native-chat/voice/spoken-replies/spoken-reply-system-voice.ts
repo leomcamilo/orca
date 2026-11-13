@@ -69,9 +69,8 @@ const VOICES_WAIT_MS = 1500
 
 /** Runs `speak` once the system has listed its voices, so the first reply is not spoken in the
  *  system's default voice and language. Runs at once when they are listed already. */
-export function whenSystemVoicesListed(speak: () => void): void {
-  const synthesis = systemSynthesis()
-  if (!synthesis || synthesis.getVoices().length > 0) {
+function whenSystemVoicesListed(synthesis: SpeechSynthesis, speak: () => void): void {
+  if (synthesis.getVoices().length > 0) {
     speak()
     return
   }
@@ -99,7 +98,10 @@ export function systemSpokenReplySpeech(): SpokenReplySpeech | null {
       ? new SpokenReplySpeech(
           systemSynthesizer(synthesis),
           (line) => useSpokenReplyLine.setState({ line }),
-          (next) => setTimeout(next, AFTER_CANCEL_MS)
+          {
+            afterCancel: (next) => setTimeout(next, AFTER_CANCEL_MS),
+            whenReady: (speak) => whenSystemVoicesListed(synthesis, speak)
+          }
         )
       : null
   }

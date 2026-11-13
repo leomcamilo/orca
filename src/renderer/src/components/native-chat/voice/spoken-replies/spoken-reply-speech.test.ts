@@ -7,17 +7,18 @@ import {
   type SpokenReplyVoicePick
 } from './spoken-reply-speech'
 
-const SYSTEM_CHOICE: SpokenReplyVoicePick = { voice: null, language: null }
+const SYSTEM_CHOICE = (): SpokenReplyVoicePick => ({ voice: null, language: null })
 
 function voice(name: string, lang: string, localService = true): SpokenReplyVoice {
   return { voiceURI: `uri:${name}`, name, lang, localService, default: false }
 }
 
-function rig() {
+function rig(options = { ready: true }) {
   const spoken: string[] = []
   const lines: (SpokenReplyLine | null)[] = []
   let finish: (() => void) | null = null
   let afterCancel: (() => void) | null = null
+  let whenReady: (() => void) | null = null
   const speech = new SpokenReplySpeech(
     {
       speak: (text, _pick, onDone) => {
@@ -28,8 +29,18 @@ function rig() {
       cancel: () => finish?.()
     },
     (line) => lines.push(line),
-    (next) => {
-      afterCancel = next
+    {
+      afterCancel: (next) => {
+        afterCancel = next
+      },
+      // Held only when a test says the system is not ready.
+      whenReady: (speak) => {
+        if (options.ready) {
+          speak()
+        } else {
+          whenReady = speak
+        }
+      }
     }
   )
   return {
@@ -37,7 +48,8 @@ function rig() {
     spoken,
     lines,
     finish: () => finish?.(),
-    settle: () => afterCancel?.()
+    settle: () => afterCancel?.(),
+    becomeReady: () => whenReady?.()
   }
 }
 
@@ -66,6 +78,19 @@ describe('SpokenReplySpeech', () => {
     settle()
     expect(spoken).toEqual(['One.', 'Other.'])
     expect(lines.at(-1)).toEqual({ owner: 'chat-b', text: 'Other.' })
+  })
+})
+
+describe('a line that waits for the system voice', () => {
+  it('already counts as speech, and is never spoken once silenced', () => {
+    const { speech, spoken, lines, becomeReady } = rig({ ready: false })
+    speech.say('chat-a', ['One.'], SYSTEM_CHOICE)
+    expect(lines.at(-1)).toEqual({ owner: 'chat-a', text: 'One.' })
+    expect(spoken).toEqual([])
+    speech.silence('chat-a')
+    becomeReady()
+    expect(spoken).toEqual([])
+    expect(lines.at(-1)).toBeNull()
   })
 })
 

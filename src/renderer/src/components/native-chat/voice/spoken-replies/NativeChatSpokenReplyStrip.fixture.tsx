@@ -1,6 +1,6 @@
 import { defineFixture } from '../../../../component-fixtures/component-fixture'
 import { NativeChatSpokenReplyControls } from './NativeChatSpokenReplyControls'
-import { NativeChatSpokenReplyStrip } from './NativeChatSpokenReplyStrip'
+import { NativeChatHandsFreeStrip, NativeChatSpokenReplyStrip } from './NativeChatSpokenReplyStrip'
 import type { NativeChatSpokenReplies } from './use-native-chat-spoken-replies'
 
 // Synthetic reply only; no recorded or real conversation.
@@ -11,7 +11,7 @@ function control(on: boolean, handsFree: boolean): NativeChatSpokenReplies {
     on,
     sessionId: 'fixture',
     visible: true,
-    line: on ? LINE : null,
+    line: on && !handsFree ? LINE : null,
     agentLabel: 'Claude',
     handsFree,
     toggle: () => {},
@@ -32,9 +32,11 @@ const RESTING = {
 function composer(on: boolean, handsFree = false): () => React.JSX.Element {
   return () => (
     <div className="native-chat-appearance p-4 pt-6">
-      {on ? (
+      {!on ? null : handsFree ? (
+        <NativeChatHandsFreeStrip agentLabel="Claude" onStop={() => {}} />
+      ) : (
         <NativeChatSpokenReplyStrip line={LINE} agentLabel="Claude" onSilence={() => {}} />
-      ) : null}
+      )}
       <div className="mx-3 flex items-center justify-between rounded-md border border-border p-3 text-sm text-muted-foreground sm:mx-4">
         Composer
         <span className="flex items-center gap-1">

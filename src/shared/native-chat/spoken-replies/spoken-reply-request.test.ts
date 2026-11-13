@@ -13,6 +13,7 @@ describe('spoken reply request', () => {
     expect(sent.startsWith('Qual o estado do build?\n\n[Orca Voice mode: ')).toBe(true)
     expect(withSpokenReplyRequest(sent)).toBe(sent)
     expect(withoutSpokenReplyRequest(sent)).toBe('Qual o estado do build?')
+    expect(withoutSpokenReplyRequest(`${sent}\n`)).toBe('Qual o estado do build?')
   })
 
   it('leaves a command and an empty message as written', () => {

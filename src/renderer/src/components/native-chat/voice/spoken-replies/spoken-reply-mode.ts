@@ -24,11 +24,12 @@ export function setSpokenReplyMode(sessionId: string, on: boolean): void {
   }))
 }
 
-/** Listening for the person's turn only makes a conversation with replies read back. */
+/** Listening for the person's turn only makes a conversation with replies read back. One chat
+ *  listens at a time: there is one microphone, and what it hears must have one destination. */
 export function setHandsFreeMode(sessionId: string, handsFree: boolean): void {
   useSpokenReplyMode.setState((state) => ({
     on: handsFree ? withChat(state.on, sessionId, true) : state.on,
-    handsFree: withChat(state.handsFree, sessionId, handsFree)
+    handsFree: handsFree ? { [sessionId]: true } : withChat(state.handsFree, sessionId, false)
   }))
 }
 

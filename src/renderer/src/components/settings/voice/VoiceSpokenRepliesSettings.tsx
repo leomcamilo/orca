@@ -104,7 +104,7 @@ export function VoiceSpokenRepliesSettings({
                       'This is how replies will sound.'
                     )
                   ],
-                  spokenReplyVoiceFor(voiceSettings)
+                  () => spokenReplyVoiceFor(voiceSettings)
                 )
               }}
             >

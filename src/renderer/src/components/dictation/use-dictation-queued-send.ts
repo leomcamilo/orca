@@ -13,6 +13,13 @@ type QueuedSend = (stillQueued: () => boolean) => void | Promise<void>
 
 type ComposerSendQueue = (root: HTMLElement, send: () => void) => boolean
 let composerSendQueue: ComposerSendQueue | null = null
+let dictatedComposer: (() => HTMLElement | null) | null = null
+
+/** Whether the running dictation writes into the composer that holds this node. */
+export function dictationLandsInComposerOf(node: Node | null): boolean {
+  const composer = dictatedComposer?.() ?? null
+  return composer !== null && node !== null && composer.contains(node)
+}
 
 /**
  * A composer's Send: while it's being dictated into, it waits for the last words to land and render,
@@ -79,8 +86,13 @@ export function useDictationQueuedSend(
       const target = keptRef.current?.target
       return target?.kind === 'composer' && target.root === root && queue('chat', send)
     }
+    dictatedComposer = () => {
+      const target = keptRef.current?.target
+      return target?.kind === 'composer' ? target.root : null
+    }
     return () => {
       composerSendQueue = null
+      dictatedComposer = null
     }
   }, [keptRef, queue])
 

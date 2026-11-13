@@ -1,4 +1,4 @@
-import { Square } from 'lucide-react'
+import { Ear, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useTranslate } from '@/i18n/use-translate'
@@ -50,17 +50,56 @@ export function NativeChatSpokenReplyStrip(props: {
   )
 }
 
-/** Stays mounted while a prompt card replaces the composer, so the voice can always be quieted. */
+/** Says, for as long as the chat listens for the person's turn, that what the microphone hears
+ *  is sent on its own, with the control that ends it. */
+export function NativeChatHandsFreeStrip(props: {
+  agentLabel: string
+  onStop: () => void
+}): React.JSX.Element {
+  const t = useTranslate()
+  return (
+    <NativeChatComposerTabStrip data-native-chat-spoken-reply="hands-free">
+      <Ear className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+      <div className="min-w-0 flex-1 py-0.5">
+        <span role="status" className="font-medium">
+          {t('components.native-chat.spokenReplies.handsFreeOn', 'Listening for your turn')}
+        </span>
+        <span className="block truncate text-2xs">
+          {t(
+            'components.native-chat.spokenReplies.handsFreeDisclosure',
+            'What the microphone hears is sent to {{agent}} after each pause.',
+            { agent: props.agentLabel }
+          )}
+        </span>
+      </div>
+      <Button type="button" variant="ghost" size="xs" onClick={props.onStop}>
+        <Square className="size-2.5 fill-current" />
+        {t('components.native-chat.spokenReplies.handsFreeStopShort', 'Stop listening')}
+      </Button>
+    </NativeChatComposerTabStrip>
+  )
+}
+
+/** Stays mounted while a prompt card replaces the composer, so the voice can always be quieted
+ *  and the listening always ended. */
 export function NativeChatSpokenReplyStripSlot(): React.JSX.Element | null {
   const spoken = useNativeChatSpokenRepliesControl()
-  if (!spoken?.line) {
+  if (!spoken) {
     return null
   }
-  return (
-    <NativeChatSpokenReplyStrip
-      line={spoken.line}
+  if (spoken.line) {
+    return (
+      <NativeChatSpokenReplyStrip
+        line={spoken.line}
+        agentLabel={spoken.agentLabel}
+        onSilence={spoken.silence}
+      />
+    )
+  }
+  return spoken.handsFree ? (
+    <NativeChatHandsFreeStrip
       agentLabel={spoken.agentLabel}
-      onSilence={spoken.silence}
+      onStop={() => spoken.setHandsFree(false)}
     />
-  )
+  ) : null
 }
