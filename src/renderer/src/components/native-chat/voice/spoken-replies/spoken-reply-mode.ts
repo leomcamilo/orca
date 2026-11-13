@@ -2,16 +2,34 @@ import { create } from 'zustand'
 import { useAppStore } from '@/store'
 import type { AgentType } from '../../../../../../shared/agent-status/contracts/agent-status-types'
 
-/** The chats reading their replies aloud. Kept in memory: a restart starts every chat silent. */
-export const useSpokenReplyMode = create<{ on: Readonly<Record<string, true>> }>(() => ({
-  on: {}
+type ChatSet = Readonly<Record<string, true>>
+
+/** The chats reading their replies aloud, and those among them also listening for the person's
+ *  turn. Kept in memory: a restart starts every chat silent, with its microphone closed. */
+export const useSpokenReplyMode = create<{ on: ChatSet; handsFree: ChatSet }>(() => ({
+  on: {},
+  handsFree: {}
 }))
 
+function withChat(chats: ChatSet, sessionId: string, member: boolean): ChatSet {
+  const { [sessionId]: _was, ...others } = chats
+  return member ? { ...others, [sessionId]: true } : others
+}
+
+/** Turning replies off closes the microphone too: nobody talks hands-free to a silent chat. */
 export function setSpokenReplyMode(sessionId: string, on: boolean): void {
-  useSpokenReplyMode.setState((state) => {
-    const { [sessionId]: _was, ...others } = state.on
-    return { on: on ? { ...others, [sessionId]: true } : others }
-  })
+  useSpokenReplyMode.setState((state) => ({
+    on: withChat(state.on, sessionId, on),
+    handsFree: on ? state.handsFree : withChat(state.handsFree, sessionId, false)
+  }))
+}
+
+/** Listening for the person's turn only makes a conversation with replies read back. */
+export function setHandsFreeMode(sessionId: string, handsFree: boolean): void {
+  useSpokenReplyMode.setState((state) => ({
+    on: handsFree ? withChat(state.on, sessionId, true) : state.on,
+    handsFree: withChat(state.handsFree, sessionId, handsFree)
+  }))
 }
 
 /** Codex chats talk through Codex's own Voice mode instead. */

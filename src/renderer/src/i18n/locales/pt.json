@@ -21790,7 +21790,13 @@
         "silenceHint": "Cala a voz. O {{agent}} continua trabalhando.",
         "approval": "{{agent}} precisa da sua aprovação: {{title}}",
         "question": "{{agent}} pergunta: {{question}}",
-        "restOnScreen": "O restante está na tela."
+        "restOnScreen": "O restante está na tela.",
+        "handsFreeUnused": "Parei de escutar após {{seconds}} segundos sem fala",
+        "handsFreeFailed": "Parei de escutar: o ditado não conseguiu iniciar",
+        "handsFreeStop": "Parar de escutar a sua vez",
+        "handsFreeStart": "Escutar a sua vez",
+        "handsFreeNeedsDictation": "Ative o ditado nos Ajustes para escutar a sua vez",
+        "handsFreeHint": "Converse por turnos sem tocar no teclado. O microfone abre quando o {{agent}} termina, o que você disser é enviado após uma pausa curta e a resposta é lida em voz alta. Para sozinho após {{seconds}} segundos sem fala."
       }
     },
     "tab": {
@@ -22403,7 +22409,7 @@
           "sample": "Tocar uma amostra",
           "enableLabel": "Oferecer respostas faladas",
           "unavailable": "Este sistema não tem voz de fala instalada.",
-          "enableDescription": "Adiciona um botão de alto-falante ao chat. Com ele ligado, cada mensagem enviada também pede ao agente que abra a resposta com um trecho curto, feito para ouvir, e a voz do sistema lê esse trecho. Código, tabelas e links ficam na tela.",
+          "enableDescription": "Adiciona um botão de alto-falante ao chat. Com ele ligado, cada mensagem enviada também pede ao agente que abra a resposta com um trecho curto, feito para ouvir, e a voz do sistema lê esse trecho. Código, tabelas e links ficam na tela. Um segundo botão faz o chat escutar a sua vez usando o ditado.",
           "voiceLabel": "Voz",
           "voiceDescription": "Uma voz instalada neste computador. Automática segue o idioma do ditado ou do app.",
           "sampleText": "É assim que as respostas vão soar.",

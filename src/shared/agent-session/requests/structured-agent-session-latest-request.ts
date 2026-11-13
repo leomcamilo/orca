@@ -1,4 +1,5 @@
 // Sidebar request/verdict/preview share this read: a turn or refused send is a request; steers belong to their turn, and commands are not requests.
+import { withoutSpokenReplyRequest } from '../../native-chat/spoken-replies/spoken-reply-request'
 
 import type {
   AgentJournalRenderItem,
@@ -163,7 +164,9 @@ function turnEndedAt(
 }
 
 function messageProse(blocks: readonly NativeChatBlock[]): string {
-  return blocks.flatMap((block) => (block.type === 'text' ? [block.text] : [])).join('\n')
+  return withoutSpokenReplyRequest(
+    blocks.flatMap((block) => (block.type === 'text' ? [block.text] : [])).join('\n')
+  )
 }
 
 /** Root user prompts only; child prompts share this journal but must not become the session preview. */

@@ -7,23 +7,35 @@ export type SpokenReplyVoice = {
   default: boolean
 }
 
+/** The voice to speak with. Without one, the language still tells the system which to use. */
+export type SpokenReplyVoicePick = { voice: SpokenReplyVoice | null; language: string | null }
+
 export type SpokenReplySynthesizer = {
   /** `onDone` fires once, when the line ends, fails or is cancelled. */
-  speak: (text: string, voice: SpokenReplyVoice | null, onDone: () => void) => void
+  speak: (text: string, pick: SpokenReplyVoicePick, onDone: () => void) => void
   cancel: () => void
 }
 
 export type SpokenReplyLine = { owner: string; text: string }
 
-type Job = { owner: string; lines: string[]; voice: SpokenReplyVoice | null }
+type Job = { owner: string; lines: string[]; pick: SpokenReplyVoicePick }
 
 function languageOf(tag: string): string {
   return tag.replace('_', '-').toLowerCase()
 }
 
 /** The chosen voice if the system still has it; else an on-device voice for the first language
- *  that has one, preferring the exact region. Null leaves the choice to the system. */
+ *  that has one, preferring the exact region. With no voice, the first language is the pick. */
 export function pickSpokenReplyVoice(
+  voices: readonly SpokenReplyVoice[],
+  chosenVoiceURI: string | undefined,
+  languages: readonly string[]
+): SpokenReplyVoicePick {
+  const voice = voiceFor(voices, chosenVoiceURI, languages)
+  return { voice, language: voice?.lang ?? languages[0] ?? null }
+}
+
+function voiceFor(
   voices: readonly SpokenReplyVoice[],
   chosenVoiceURI: string | undefined,
   languages: readonly string[]
@@ -53,18 +65,23 @@ export function pickSpokenReplyVoice(
 export class SpokenReplySpeech {
   private readonly queue: Job[] = []
   private current: { job: Job; line: number } | null = null
+  // Between a cancel and the next line, nothing new starts.
+  private settling = false
 
   constructor(
     private readonly synthesizer: SpokenReplySynthesizer,
-    private readonly onLine: (line: SpokenReplyLine | null) => void
+    private readonly onLine: (line: SpokenReplyLine | null) => void,
+    /** Runs the next reply after a cancel; a system that drops a line spoken right after one
+     *  gets a moment first. */
+    private readonly afterCancel: (next: () => void) => void = (next) => next()
   ) {}
 
-  say(owner: string, lines: readonly string[], voice: SpokenReplyVoice | null): void {
+  say(owner: string, lines: readonly string[], pick: SpokenReplyVoicePick): void {
     const spoken = lines.filter((line) => line.trim().length > 0)
     if (spoken.length === 0) {
       return
     }
-    this.queue.push({ owner, lines: spoken, voice })
+    this.queue.push({ owner, lines: spoken, pick })
     this.advance()
   }
 
@@ -79,12 +96,16 @@ export class SpokenReplySpeech {
       this.current = null
       this.synthesizer.cancel()
       this.onLine(null)
-      this.advance()
+      this.settling = true
+      this.afterCancel(() => {
+        this.settling = false
+        this.advance()
+      })
     }
   }
 
   private advance(): void {
-    if (this.current) {
+    if (this.current || this.settling) {
       return
     }
     const job = this.queue.shift()
@@ -97,7 +118,7 @@ export class SpokenReplySpeech {
     const spoken = { job, line }
     this.current = spoken
     this.onLine({ owner: job.owner, text: job.lines[line] })
-    this.synthesizer.speak(job.lines[line], job.voice, () => {
+    this.synthesizer.speak(job.lines[line], job.pick, () => {
       // A cancelled line still reports its end; only the one being spoken moves the queue.
       if (this.current !== spoken) {
         return

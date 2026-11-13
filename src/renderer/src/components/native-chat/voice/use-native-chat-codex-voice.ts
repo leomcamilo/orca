@@ -7,6 +7,7 @@ import { subscribeStructuredAgentSessionVoice } from '@/runtime/native-chat/requ
 import { openMicrophoneCaptureStream } from '@/components/dictation/microphone-devices'
 import { CodexVoiceCall, type CodexVoiceCallState } from './codex-voice-call'
 import { noteCodexVoiceSource } from './codex-voice-catalog'
+import { holdVoiceCallPresence } from './voice-call-presence'
 import { AGENT_SESSION_VOICE_NAME_PATTERN } from '../../../../../shared/agent-session/agent-session-voice-conversation'
 
 export type NativeChatCodexVoice = {
@@ -92,6 +93,8 @@ export function useNativeChatCodexVoice(args: {
   const dictating = dictationState === 'starting' || dictationState === 'listening'
   const callRef = useRef<CodexVoiceCall | null>(null)
   const [call, setCall] = useState<CodexVoiceCallState | null>(null)
+  const inCall = call !== null && call.phase !== 'ended'
+  useEffect(() => (inCall ? holdVoiceCallPresence() : undefined), [inCall])
 
   const stop = useCallback(() => {
     callRef.current?.stop()

@@ -21643,7 +21643,13 @@
         "silenceHint": "Stops the voice. {{agent}} keeps working.",
         "approval": "{{agent}} needs your approval: {{title}}",
         "question": "{{agent}} asks: {{question}}",
-        "restOnScreen": "The rest is on screen."
+        "restOnScreen": "The rest is on screen.",
+        "handsFreeUnused": "Stopped listening after {{seconds}} seconds without speech",
+        "handsFreeFailed": "Stopped listening: dictation could not start",
+        "handsFreeStop": "Stop listening for your turn",
+        "handsFreeStart": "Listen for your turn",
+        "handsFreeNeedsDictation": "Turn on dictation in Settings to listen for your turn",
+        "handsFreeHint": "Talk in turns without touching the keyboard. The microphone opens when {{agent}} has finished, your words are sent after a short pause, and the reply is read aloud. It stops after {{seconds}} seconds without speech."
       }
     },
     "tab": {
@@ -22328,7 +22334,7 @@
           "sample": "Play a sample",
           "enableLabel": "Offer spoken replies",
           "unavailable": "This system has no speech voice installed.",
-          "enableDescription": "Adds a speaker button to the chat. While it is on, each message you send also asks the agent to open its reply with a short part meant for listening, and your system voice reads that part. Code, tables and links stay on screen.",
+          "enableDescription": "Adds a speaker button to the chat. While it is on, each message you send also asks the agent to open its reply with a short part meant for listening, and your system voice reads that part. Code, tables and links stay on screen. A second button makes the chat listen for your turn with dictation.",
           "voiceLabel": "Voice",
           "voiceDescription": "A voice installed on this computer. Automatic follows your dictation or app language.",
           "sampleText": "This is how replies will sound.",

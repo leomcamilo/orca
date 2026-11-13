@@ -1,6 +1,7 @@
 import { normalizeAgentSessionConversationName } from '../../../agent-session/agent-session-conversation-name'
 import { cleanGeneratedCommitMessage } from './commit-message-agent-output'
 import { sliceAtCodeUnitLimit } from '../../../surrogate-safe-text-slice'
+import { withoutSpokenReplyRequest } from '../../../native-chat/spoken-replies/spoken-reply-request'
 import { renderSourceControlActionCommandTemplate } from '../recipes/source-control-ai-actions'
 
 export type ConversationNameContext = { firstPrompt: string }
@@ -9,7 +10,10 @@ const MAX_FIRST_PROMPT_LENGTH = 4000
 const MAX_GENERATED_NAME_LENGTH = 48
 
 export function clampConversationNameFirstPrompt(firstPrompt: string): string {
-  return sliceAtCodeUnitLimit(firstPrompt.trim(), MAX_FIRST_PROMPT_LENGTH)
+  return sliceAtCodeUnitLimit(
+    withoutSpokenReplyRequest(firstPrompt).trim(),
+    MAX_FIRST_PROMPT_LENGTH
+  )
 }
 
 /** The naming request's first line; Session History reads it to hide these one-shot runs. */

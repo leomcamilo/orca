@@ -4,6 +4,8 @@ import {
   withSpokenReplyRequest,
   withoutSpokenReplyRequest
 } from './spoken-reply-request'
+import { clampConversationNameFirstPrompt } from '../../source-control/ai/generation/conversation-name-generation'
+import { latestStructuredAgentSessionPrompt } from '../../agent-session/requests/structured-agent-session-latest-request'
 
 describe('spoken reply request', () => {
   it('adds one note to a message and shows the message without it', () => {
@@ -23,5 +25,21 @@ describe('spoken reply request', () => {
     expect(blocksWithoutSpokenReplyRequest(plain)).toBe(plain)
     const sent = [{ type: 'text' as const, text: withSpokenReplyRequest('hello') }]
     expect(blocksWithoutSpokenReplyRequest(sent)).toEqual([{ type: 'text', text: 'hello' }])
+  })
+
+  it('keeps the note out of what names a chat and previews its latest prompt', () => {
+    const sent = withSpokenReplyRequest('Corrige o login')
+    expect(clampConversationNameFirstPrompt(sent)).toBe('Corrige o login')
+    expect(
+      latestStructuredAgentSessionPrompt([
+        {
+          itemId: 'u1',
+          revision: 1,
+          sequence: 1,
+          observedAt: 1,
+          body: { kind: 'message', role: 'user', blocks: [{ type: 'text', text: sent }] }
+        }
+      ])
+    ).toBe('Corrige o login')
   })
 })
