@@ -28,10 +28,18 @@ export function useNativeChatCodexVoiceControl(): NativeChatCodexVoice | null {
   return useContext(NativeChatCodexVoiceContext)
 }
 
+// An unreachable host is not a "no": ask again, since its recovery keeps the same environment.
+const UNREACHABLE_PROBE_RETRY_MS = 30_000
+
 function useVoiceRelayAvailability(
   environmentId: string | null
 ): NativeChatCodexVoice['availability'] {
-  const [remote, setRemote] = useState<{ id: string; supported: boolean } | null>(null)
+  const [remote, setRemote] = useState<{
+    id: string
+    supported: boolean
+    unreachable: boolean
+  } | null>(null)
+  const [probe, setProbe] = useState(0)
   useEffect(() => {
     if (environmentId === null) {
       return
@@ -39,17 +47,30 @@ function useVoiceRelayAvailability(
     let current = true
     void runtimeEnvironmentSupportsCapabilities(environmentId, [
       AGENT_SESSION_CODEX_VOICE_RUNTIME_CAPABILITY
-    ])
-      .catch(() => [false])
-      .then(([supported]) => {
+    ]).then(
+      ([supported]) => {
         if (current) {
-          setRemote({ id: environmentId, supported: supported === true })
+          setRemote({ id: environmentId, supported: supported === true, unreachable: false })
         }
-      })
+      },
+      () => {
+        if (current) {
+          setRemote({ id: environmentId, supported: false, unreachable: true })
+        }
+      }
+    )
     return () => {
       current = false
     }
-  }, [environmentId])
+  }, [environmentId, probe])
+  const unreachable = remote?.id === environmentId && remote.unreachable
+  useEffect(() => {
+    if (!unreachable) {
+      return
+    }
+    const retry = setTimeout(() => setProbe((count) => count + 1), UNREACHABLE_PROBE_RETRY_MS)
+    return () => clearTimeout(retry)
+  }, [unreachable, probe])
   if (environmentId === null) {
     return 'available'
   }

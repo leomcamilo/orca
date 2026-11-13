@@ -55,6 +55,7 @@ import { resolveUpdateInstallMode } from '../../updater/updater-service'
 import { scheduleAgentLaunchRecordWarmup } from '../agent-accounts/agent-launch-record-warmup'
 import { emitServeBrowserIdentityActionLine } from '../../server/serve-stdout-boundary'
 import { getBrowserIdentityModeStatus } from '../../browser/identity/mode/browser-identity-mode-store'
+import { LEO_VOICE_DISTRIBUTION } from '../../leo-voice/leo-voice-distribution'
 
 type RuntimeService = NonNullable<typeof state.runtime>
 
@@ -97,7 +98,7 @@ function installRuntimeRpc(
     throw new Error(`Invalid ORCA_E2E_RUNTIME_WS_PORT value: ${requestedE2EWsPort}`)
   }
   // STA-1511: separate dev port from packaged Orca so pairing/repro URLs do not fall back unpredictably.
-  const devWsPort = !app.isPackaged && !isE2E ? 6769 : undefined
+  const devWsPort = isE2E ? undefined : app.isPackaged ? LEO_VOICE_DISTRIBUTION.wsPort : 6769
   const pinnedBindHost = resolveServePinnedBindHost({
     orcadSidecar: isOrcadSidecarLaunch(),
     serveOptions

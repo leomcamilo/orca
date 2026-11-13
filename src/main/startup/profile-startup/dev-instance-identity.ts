@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import path from 'node:path'
 import type { AppIdentity } from '../../../shared/app-identity'
+import { LEO_VOICE_DISTRIBUTION } from '../../leo-voice/leo-voice-distribution'
 
 const BASE_APP_NAME = 'Orca'
 const BASE_APP_USER_MODEL_ID = 'com.stablyai.orca'
@@ -13,8 +14,9 @@ export type DevInstanceIdentity = AppIdentity & {
 }
 
 /** Electron fixes the Keychain service before ready. Rename dev only; packaged forks must retain their CFBundleName-derived encryption keys. */
-export function shouldApplyPreReadyAppName(identity: Pick<AppIdentity, 'isDev'>): boolean {
-  return identity.isDev
+export function shouldApplyPreReadyAppName(_identity: Pick<AppIdentity, 'isDev'>): boolean {
+  // This personal build starts its own profile, so it names its own Keychain key before ready.
+  return true
 }
 
 function cleanEnvValue(value: string | undefined): string | null {
@@ -56,8 +58,8 @@ export function getDevInstanceIdentity(
 ): DevInstanceIdentity {
   if (!isDev) {
     return {
-      name: BASE_APP_NAME,
-      appName: BASE_APP_NAME,
+      name: LEO_VOICE_DISTRIBUTION.appName,
+      appName: LEO_VOICE_DISTRIBUTION.appName,
       isDev: false,
       devLabel: null,
       devBranch: null,

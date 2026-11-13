@@ -3,6 +3,7 @@ import { isMacInstallRequested } from '../mac-install/updater-mac-install'
 import type { UpdateCheckOptions } from '../../../shared/update-status-types'
 import type { ReleaseChannel } from '../../../shared/release-channel'
 import { UpdaterScheduling } from './updater-scheduling'
+import { LEO_VOICE_DISTRIBUTION } from '../../leo-voice/leo-voice-distribution'
 
 export abstract class UpdaterMenuChecks extends UpdaterScheduling {
   protected checkForUpdatesFromMenu(options?: UpdateCheckOptions): void {
@@ -13,7 +14,7 @@ export abstract class UpdaterMenuChecks extends UpdaterScheduling {
     ) {
       return
     }
-    if (!app.isPackaged) {
+    if (!app.isPackaged || LEO_VOICE_DISTRIBUTION.updatesOff) {
       this.sendStatus({ state: 'not-available', userInitiated: true })
       return
     }
