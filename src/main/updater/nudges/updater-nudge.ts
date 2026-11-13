@@ -2,10 +2,11 @@ import { app } from 'electron'
 import { fetchNudge, shouldApplyNudge } from './nudge-campaign'
 import { NUDGE_ACTIVATION_COOLDOWN_MS, NUDGE_POLL_INTERVAL_MS } from '../lifecycle/updater-state'
 import { UpdaterBuildSelection } from '../releases/updater-build-selection'
+import { LEO_VOICE_DISTRIBUTION } from '../../leo-voice/leo-voice-distribution'
 
 export abstract class UpdaterNudge extends UpdaterBuildSelection {
   protected async checkForUpdateNudge(): Promise<void> {
-    if (!app.isPackaged) {
+    if (!app.isPackaged || LEO_VOICE_DISTRIBUTION.updatesOff) {
       return
     }
     if (this.nudgeCheckInFlight) {

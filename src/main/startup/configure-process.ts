@@ -17,6 +17,7 @@ import {
   readActiveProfileId,
   readPersistedHttp1CompatibilityMode
 } from './network-compatibility/http1-compatibility-profile-state'
+import { LEO_VOICE_DISTRIBUTION } from '../leo-voice/leo-voice-distribution'
 
 const DEV_PARENT_SHUTDOWN_GRACE_MS = 3000
 const HTTP1_COMPATIBILITY_ENV_VAR = 'ORCA_DISABLE_HTTP2'
@@ -220,6 +221,7 @@ export function configureDevUserDataPath(isDev: boolean): void {
   }
 
   if (!isDev) {
+    app.setPath('userData', join(app.getPath('appData'), LEO_VOICE_DISTRIBUTION.userDataDirName))
     return
   }
   const overrideUserDataPath = process.env.ORCA_DEV_USER_DATA_PATH
