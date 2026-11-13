@@ -37,14 +37,16 @@ function systemSynthesizer(synthesis: SpeechSynthesis): SpokenReplySynthesizer {
   // Chromium can drop an utterance's events once nothing else references it.
   const speaking = new Set<SpeechSynthesisUtterance>()
   return {
-    speak: (text, voice, onDone) => {
+    speak: (text, pick, onDone) => {
       const utterance = new SpeechSynthesisUtterance(text)
-      const systemVoice = voice
-        ? synthesis.getVoices().find((candidate) => candidate.voiceURI === voice.voiceURI)
-        : undefined
+      const systemVoice = synthesis
+        .getVoices()
+        .find((candidate) => candidate.voiceURI === pick.voice?.voiceURI)
       if (systemVoice) {
         utterance.voice = systemVoice
         utterance.lang = systemVoice.lang
+      } else if (pick.language) {
+        utterance.lang = pick.language
       }
       const done = (): void => {
         if (speaking.delete(utterance)) {
@@ -60,15 +62,44 @@ function systemSynthesizer(synthesis: SpeechSynthesis): SpokenReplySynthesizer {
   }
 }
 
+// Chromium can drop a line spoken in the same task as a cancel.
+const AFTER_CANCEL_MS = 80
+// The system lists its voices a moment after the first ask; a reply waits that long, no longer.
+const VOICES_WAIT_MS = 1500
+
+/** Runs `speak` once the system has listed its voices, so the first reply is not spoken in the
+ *  system's default voice and language. Runs at once when they are listed already. */
+export function whenSystemVoicesListed(speak: () => void): void {
+  const synthesis = systemSynthesis()
+  if (!synthesis || synthesis.getVoices().length > 0) {
+    speak()
+    return
+  }
+  let waiting = true
+  const run = (): void => {
+    if (waiting) {
+      waiting = false
+      synthesis.removeEventListener('voiceschanged', run)
+      speak()
+    }
+  }
+  synthesis.addEventListener('voiceschanged', run)
+  setTimeout(run, VOICES_WAIT_MS)
+}
+
 let speech: SpokenReplySpeech | null | undefined
 
 /** Null where the platform has no speech synthesis. */
 export function systemSpokenReplySpeech(): SpokenReplySpeech | null {
   if (speech === undefined) {
     const synthesis = systemSynthesis()
+    // The first ask starts the system listing its voices.
+    synthesis?.getVoices()
     speech = synthesis
-      ? new SpokenReplySpeech(systemSynthesizer(synthesis), (line) =>
-          useSpokenReplyLine.setState({ line })
+      ? new SpokenReplySpeech(
+          systemSynthesizer(synthesis),
+          (line) => useSpokenReplyLine.setState({ line }),
+          (next) => setTimeout(next, AFTER_CANCEL_MS)
         )
       : null
   }

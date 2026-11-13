@@ -6,7 +6,7 @@ import {
 
 /** Owns the chat's spoken replies for the composer's button, the strip and the journal reader. */
 export function NativeChatSpokenRepliesProvider(props: {
-  pane: { sessionId: string; agent: AgentType }
+  pane: { sessionId: string; agent: AgentType; isVisible: boolean }
   children: React.ReactNode
 }): React.JSX.Element {
   const spoken = useNativeChatSpokenReplies(props.pane)

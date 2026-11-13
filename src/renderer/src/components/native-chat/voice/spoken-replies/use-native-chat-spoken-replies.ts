@@ -10,21 +10,33 @@ import {
   speakableReply
 } from '../../../../../../shared/native-chat/spoken-replies/speakable-reply'
 import { SpokenReplyCues, type SpokenReplyCue } from './spoken-reply-cues'
-import { pickSpokenReplyVoice, type SpokenReplyVoice } from './spoken-reply-speech'
-import { setSpokenReplyMode, spokenRepliesOffered, useSpokenReplyMode } from './spoken-reply-mode'
+import { pickSpokenReplyVoice, type SpokenReplyVoicePick } from './spoken-reply-speech'
+import { useVoiceCallPresence } from '../voice-call-presence'
+import {
+  setHandsFreeMode,
+  setSpokenReplyMode,
+  spokenRepliesOffered,
+  useSpokenReplyMode
+} from './spoken-reply-mode'
 import {
   systemSpokenReplySpeech,
   systemSpokenReplyVoices,
-  useSpokenReplyLine
+  useSpokenReplyLine,
+  whenSystemVoicesListed
 } from './spoken-reply-system-voice'
 
 export type NativeChatSpokenReplies = {
   on: boolean
   sessionId: string
+  /** The chat is on screen; a hidden chat stays quiet, since its Quiet control is hidden too. */
+  visible: boolean
   /** The sentence this chat is speaking now. */
   line: string | null
   agentLabel: string
+  /** The chat also opens the microphone for the person's turn and sends what they say. */
+  handsFree: boolean
   toggle: () => void
+  setHandsFree: (handsFree: boolean) => void
   /** Stops the voice; the agent's work is untouched. */
   silence: () => void
 }
@@ -40,7 +52,7 @@ const cuesBySession = new Map<string, SpokenReplyCues>()
 
 export function spokenReplyVoiceFor(
   voice: Pick<VoiceSettings, 'spokenReplyVoice' | 'dictationLanguage'> | undefined
-): SpokenReplyVoice | null {
+): SpokenReplyVoicePick {
   const dictation = voice?.dictationLanguage
   return pickSpokenReplyVoice(systemSpokenReplyVoices(), voice?.spokenReplyVoice, [
     ...(dictation && dictation !== 'auto' ? [dictation] : []),
@@ -81,12 +93,14 @@ function spokenLines(cue: SpokenReplyCue, agent: string): string[] {
 export function useNativeChatSpokenReplies(args: {
   sessionId: string
   agent: AgentType
+  isVisible: boolean
 }): NativeChatSpokenReplies | null {
-  const { sessionId, agent } = args
+  const { sessionId, agent, isVisible } = args
   const agentLabel = structuredAgentLabel(agent)
   const enabled = useAppStore((store) => store.settings?.voice?.spokenReplies)
   const offered = spokenRepliesOffered(agent, enabled) && systemSpokenReplySpeech() !== null
   const on = useSpokenReplyMode((state) => state.on[sessionId] === true) && offered
+  const handsFree = useSpokenReplyMode((state) => state.handsFree[sessionId] === true) && on
   const line = useSpokenReplyLine((state) =>
     state.line?.owner === sessionId ? state.line.text : null
   )
@@ -94,16 +108,42 @@ export function useNativeChatSpokenReplies(args: {
   // A chat that leaves the screen takes its strip with it, so its voice must not outlive it.
   useEffect(() => silence, [silence])
   useEffect(() => {
+    if (!isVisible) {
+      silence()
+    }
+  }, [isVisible, silence])
+  useEffect(() => {
     if (!on) {
       cuesBySession.delete(sessionId)
       silence()
     }
   }, [on, sessionId, silence])
 
+  // A hidden chat must not hold the microphone open.
+  useEffect(() => {
+    if (!isVisible) {
+      setHandsFreeMode(sessionId, false)
+    }
+  }, [isVisible, sessionId])
+
   const toggle = useCallback(() => setSpokenReplyMode(sessionId, !on), [sessionId, on])
+  const setHandsFree = useCallback(
+    (next: boolean) => setHandsFreeMode(sessionId, next),
+    [sessionId]
+  )
   const control = useMemo(
-    () => ({ on, sessionId, line, agentLabel, toggle, silence }),
-    [on, sessionId, line, agentLabel, toggle, silence]
+    () => ({
+      on,
+      sessionId,
+      visible: isVisible,
+      line,
+      agentLabel,
+      handsFree,
+      toggle,
+      setHandsFree,
+      silence
+    }),
+    [on, sessionId, isVisible, line, agentLabel, handsFree, toggle, setHandsFree, silence]
   )
   return offered ? control : null
 }
@@ -114,10 +154,13 @@ export function useSpokenReplyJournal(journalItems: readonly AgentJournalRenderI
   const spoken = useNativeChatSpokenRepliesControl()
   const sessionId = spoken?.on ? spoken.sessionId : null
   const agentLabel = spoken?.agentLabel ?? ''
-  // An open microphone would take the voice in as dictated text.
+  // An open microphone would take the voice in: as dictated text, or as the person's words in a
+  // Voice mode call in any chat.
   const dictating = useAppStore(
     (store) => store.dictationState === 'starting' || store.dictationState === 'listening'
   )
+  const inCall = useVoiceCallPresence((state) => state.calls > 0)
+  const quiet = dictating || inCall || spoken?.visible !== true
   useEffect(() => {
     if (sessionId === null) {
       return
@@ -129,16 +172,16 @@ export function useSpokenReplyJournal(journalItems: readonly AgentJournalRenderI
     }
     const taken = cues.take(journalItems)
     const speech = systemSpokenReplySpeech()
-    if (dictating) {
+    // What arrives meanwhile is not kept for later: read late, it would answer nothing.
+    if (quiet) {
       speech?.silence(sessionId)
       return
     }
     for (const cue of taken) {
-      speech?.say(
-        sessionId,
-        spokenLines(cue, agentLabel),
-        spokenReplyVoiceFor(useAppStore.getState().settings?.voice)
+      const lines = spokenLines(cue, agentLabel)
+      whenSystemVoicesListed(() =>
+        speech?.say(sessionId, lines, spokenReplyVoiceFor(useAppStore.getState().settings?.voice))
       )
     }
-  }, [sessionId, agentLabel, journalItems, dictating])
+  }, [sessionId, agentLabel, journalItems, quiet])
 }

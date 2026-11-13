@@ -69,7 +69,7 @@ export function VoiceSpokenRepliesSettings({
               )
             : t(
                 'components.settings.voice.spokenReplies.enableDescription',
-                'Adds a speaker button to the chat. While it is on, each message you send also asks the agent to open its reply with a short part meant for listening, and your system voice reads that part. Code, tables and links stay on screen.'
+                'Adds a speaker button to the chat. While it is on, each message you send also asks the agent to open its reply with a short part meant for listening, and your system voice reads that part. Code, tables and links stay on screen. A second button makes the chat listen for your turn with dictation.'
               )
         }
         checked={on}

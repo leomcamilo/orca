@@ -3,6 +3,7 @@ import { getFirstUserPromptCaptureMode } from './session-scanner-first-user-prom
 import { stripGrokUserQueryEnvelope } from '../scanners/grok/session-scanner-grok-user-text'
 // Import directly to avoid a cycle through the session-scanner-values re-export.
 import { sliceAtCodeUnitLimit } from '../../../shared/surrogate-safe-text-slice'
+import { withoutSpokenReplyRequest } from '../../../shared/native-chat/spoken-replies/spoken-reply-request'
 
 // Bound pathological pastes without applying the much smaller list-preview cap.
 const FULL_FIRST_USER_PROMPT_SAFETY_LIMIT = 256 * 1024
@@ -47,7 +48,9 @@ export function normalizeFullFirstUserPromptText(value: string): string | null {
 }
 
 function finalizeFullFirstUserPrompt(value: string): string | null {
-  const unwrapped = stripGrokUserQueryEnvelope(value.replace(/^\uFEFF/, ''))
+  const unwrapped = withoutSpokenReplyRequest(
+    stripGrokUserQueryEnvelope(value.replace(/^\uFEFF/, ''))
+  )
   const trimmed = unwrapped.trim()
   if (!trimmed) {
     return null
