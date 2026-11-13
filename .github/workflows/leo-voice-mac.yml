@@ -1,0 +1,101 @@
+# Leo's personal Voice mode build, installed in place of the official app. Runs only for a
+# leo-voice-v* tag pushed to leomcamilo/orca, never per commit. No secrets: ad-hoc signed, not
+# notarized, never published as a release.
+name: Leo Voice mac build
+
+on:
+  push:
+    tags: ['leo-voice-v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: leo-voice-mac
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'leomcamilo/orca'
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      ORCA_BACKGROUND_LAUNCH: '1'
+      NODE_OPTIONS: --max-old-space-size=4096
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Version from tag
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#leo-voice-v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-voice\.[0-9A-Za-z.-]+$ ]]; then
+            echo "::error::Tag $TAG must look like leo-voice-v1.4.258-voice.inplace.1"
+            exit 1
+          fi
+          echo "LEO_VOICE_VERSION=$version" >>"$GITHUB_ENV"
+
+      - name: Setup pnpm
+        uses: pnpm/setup@e62bed3a93faa9b07baad0c8f76b8391b86a3f89 # v2
+        with:
+          install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          check-latest: true
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: ./.github/actions/install-mobile-dependencies
+
+      - name: Build app and macOS helpers
+        run: |
+          pnpm run build:desktop
+          pnpm run build:computer-macos
+          pnpm run build:keyboard-layout-macos
+          pnpm run build:process-footprint-macos
+          pnpm run build:notification-status-macos
+          pnpm run ensure:electron-runtime
+
+      - name: Package (arm64 zip, ad-hoc)
+        run: >-
+          pnpm exec electron-builder --config config/leo-voice/electron-builder.leo-voice.cjs
+          --mac zip --arm64 --publish never
+
+      - name: Verify identity and record hash
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="$(find dist -maxdepth 3 -name '*.app' -type d | head -1)"
+          plist="$app/Contents/Info.plist"
+          # Same identity as the official app, so it replaces it in place on the official profile.
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = com.stablyai.orca
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = Orca
+          test -d "$app/Contents/Frameworks/Orca Helper.app"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes' "$plist" | grep -qx '    orca'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist"
+          helper="$app/Contents/Resources/Orca Computer Use.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$helper"
+          codesign --verify --deep --strict "$app"
+          codesign -dv "$app" 2>&1 | grep -E 'Identifier|Signature'
+          zip="$(ls dist/*.zip)"
+          shasum -a 256 "$zip" | tee dist/leo-voice-sha256.txt
+          echo "commit $GITHUB_SHA" >>dist/leo-voice-sha256.txt
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: orca-voice-${{ env.LEO_VOICE_VERSION }}-mac-arm64
+          path: |
+            dist/*.zip
+            dist/leo-voice-sha256.txt
+          retention-days: 1
+          if-no-files-found: error
