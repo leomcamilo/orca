@@ -17,8 +17,10 @@ import type {
   RelayDeviceBinding,
   RelayRevokeOutboxItem
 } from '../../mobile-cloud-relay/pairing/relay-revoke-outbox'
+import { LEO_VOICE_DISTRIBUTION } from '../../../leo-voice/leo-voice-distribution'
 
-export const DEFAULT_WS_PORT = 6768
+// Personal Voice build: its own port, so the official Orca keeps 6768 and its paired phones.
+export const DEFAULT_WS_PORT = LEO_VOICE_DISTRIBUTION.wsPort
 
 // Unpaired desktop starts on loopback; explicit network pairing or serve may expose interfaces (STA-2370).
 export const WS_BIND_HOST_LOOPBACK = '127.0.0.1'
