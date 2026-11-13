@@ -1,5 +1,6 @@
-# Leo's personal Voice mode build. Runs only for a leo-voice-v* tag pushed to leomcamilo/orca,
-# never per commit. No secrets: ad-hoc signed, not notarized, never published as a release.
+# Leo's personal Voice mode build, installed in place of the official app. Runs only for a
+# leo-voice-v* tag pushed to leomcamilo/orca, never per commit. No secrets: ad-hoc signed, not
+# notarized, never published as a release.
 name: Leo Voice mac build
 
 on:
@@ -21,8 +22,6 @@ jobs:
     env:
       ORCA_BACKGROUND_LAUNCH: '1'
       NODE_OPTIONS: --max-old-space-size=4096
-      # Own helper identity, so this copy never resets or claims the official helper's permissions.
-      ORCA_COMPUTER_MACOS_BUNDLE_ID: io.github.leomcamilo.orca-voice.computer-use
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - name: Checkout
@@ -36,7 +35,7 @@ jobs:
           set -euo pipefail
           version="${TAG#leo-voice-v}"
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-voice\.[0-9A-Za-z.-]+$ ]]; then
-            echo "::error::Tag $TAG must look like leo-voice-v1.4.258-voice.main.1"
+            echo "::error::Tag $TAG must look like leo-voice-v1.4.258-voice.inplace.1"
             exit 1
           fi
           echo "LEO_VOICE_VERSION=$version" >>"$GITHUB_ENV"
@@ -77,14 +76,14 @@ jobs:
           set -euo pipefail
           app="$(find dist -maxdepth 3 -name '*.app' -type d | head -1)"
           plist="$app/Contents/Info.plist"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = io.github.leomcamilo.orca-voice
-          # Electron resolves its helpers from CFBundleName, so it must stay Orca.
+          # Same identity as the official app, so it replaces it in place on the official profile.
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = com.stablyai.orca
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = Orca
           test -d "$app/Contents/Frameworks/Orca Helper.app"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$plist")" = 'Orca Voice'
-          ! /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes' "$plist" 2>/dev/null
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes' "$plist" | grep -qx '    orca'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist"
           helper="$app/Contents/Resources/Orca Computer Use.app/Contents/Info.plist"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$helper")" = "$ORCA_COMPUTER_MACOS_BUNDLE_ID"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$helper"
           codesign --verify --deep --strict "$app"
           codesign -dv "$app" 2>&1 | grep -E 'Identifier|Signature'
           zip="$(ls dist/*.zip)"
