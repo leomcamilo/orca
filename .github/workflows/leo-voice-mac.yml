@@ -78,7 +78,9 @@ jobs:
           app="$(find dist -maxdepth 3 -name '*.app' -type d | head -1)"
           plist="$app/Contents/Info.plist"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = io.github.leomcamilo.orca-voice
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = 'Orca Voice'
+          # Electron resolves its helpers from CFBundleName, so it must stay Orca.
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = Orca
+          test -d "$app/Contents/Frameworks/Orca Helper.app"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$plist")" = 'Orca Voice'
           ! /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes' "$plist" 2>/dev/null
           helper="$app/Contents/Resources/Orca Computer Use.app/Contents/Info.plist"

@@ -18,12 +18,9 @@ module.exports = {
   mac: {
     ...base.mac,
     identity: '-',
-    // productName stays "Orca": MacOS/Orca is a fixed path for the CLI shim and browser provider.
-    extendInfo: {
-      ...base.mac.extendInfo,
-      CFBundleName: 'Orca Voice',
-      CFBundleDisplayName: 'Orca Voice'
-    },
+    // Only the display name changes: Electron finds "<CFBundleName> Helper.app", and the CLI shim
+    // and browser provider expect MacOS/Orca. The Keychain key is renamed in the app before ready.
+    extendInfo: { ...base.mac.extendInfo, CFBundleDisplayName: 'Orca Voice' },
     target: [{ target: 'zip', arch: ['arm64'] }]
   }
 }
