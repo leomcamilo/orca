@@ -682,6 +682,7 @@ import {
 import { RenameParams } from './structured-agent-session-rename-params'
 import { SendRecordedParams } from './structured-agent-session-send-recorded-params'
 import { SubscribeParams } from './structured-agent-session-subscribe-params'
+import { CodexVoicesParams, VoiceConversationParams } from './structured-agent-session-voice-params'
 import { TerminalInferCodexQuestionSkip } from './terminal-codex-question-params'
 import { TerminalDaemonRestartSeveredParams } from './terminal-daemon-params'
 import { TerminalLimitUpdateParams } from './terminal-limit-params'
@@ -839,6 +840,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'agentSession.cancel': CancelParams,
   'agentSession.cancelUsageLimitContinue': CancelUsageLimitContinueParams,
   'agentSession.close': OptionsParams,
+  'agentSession.codexVoices': CodexVoicesParams,
   'agentSession.commands': OptionsParams,
   'agentSession.continuationContext': ContinuationContextParams,
   'agentSession.continueInterrupted': ContinueInterruptedParams,
@@ -882,6 +884,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'agentSession.subscribeTurnCompletions': SubscribeTurnCompletionsParams,
   'agentSession.threadGoal': ThreadGoalParams,
   'agentSession.unsubscribe': UnsubscribeParams,
+  'agentSession.voiceConversation': VoiceConversationParams,
   'agentSessionAttachment.read': AttachmentReadParams,
   'agentSessionAttachment.readTextChunk': AttachmentTextReadParams,
   'agentSessionAttachment.uploadAbort': AttachmentUploadIdParams,
