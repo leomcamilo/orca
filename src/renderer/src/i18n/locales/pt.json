@@ -21796,7 +21796,11 @@
         "handsFreeStop": "Parar de escutar a sua vez",
         "handsFreeStart": "Escutar a sua vez",
         "handsFreeNeedsDictation": "Ative o ditado nos Ajustes para escutar a sua vez",
-        "handsFreeHint": "Converse por turnos sem tocar no teclado. O microfone abre quando o {{agent}} termina, o que você disser é enviado após uma pausa curta e a resposta é lida em voz alta. Para sozinho após {{seconds}} segundos sem fala."
+        "handsFreeHint": "Converse por turnos sem tocar no teclado. O microfone abre quando o {{agent}} termina, e tudo o que ele ouvir é enviado ao {{agent}} após uma pausa curta, sem perguntar. A resposta é lida em voz alta. Para sozinho após {{seconds}} segundos sem fala.",
+        "handsFreeUnheard": "Parei de escutar: o microfone captou som, mas nenhuma palavra, duas vezes",
+        "handsFreeOn": "Escutando a sua vez",
+        "handsFreeDisclosure": "O que o microfone ouvir é enviado ao {{agent}} a cada pausa.",
+        "handsFreeStopShort": "Parar de escutar"
       }
     },
     "tab": {

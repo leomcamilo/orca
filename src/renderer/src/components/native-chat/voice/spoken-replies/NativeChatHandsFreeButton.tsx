@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef, type RefObject } from 'react'
 import { Ear } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { dispatchDictationControl } from '@/components/dictation/dictation-control-events'
 import { useDictationMeter } from '@/components/dictation/dictation-meter-store'
+import { dictationLandsInComposerOf } from '@/components/dictation/use-dictation-queued-send'
 import { useVoiceCallPresence } from '../voice-call-presence'
 import { HANDS_FREE_NO_SPEECH_MS, HandsFreeTurns } from './hands-free-turns'
 import type { NativeChatSpokenReplies } from './use-native-chat-spoken-replies'
@@ -25,7 +26,12 @@ export type NativeChatHandsFreeComposer = {
   onSend: () => void
 }
 
-function useHandsFreeTurns(spoken: NativeChatSpokenReplies, composer: NativeChatHandsFreeComposer) {
+function useHandsFreeTurns(
+  spoken: NativeChatSpokenReplies,
+  composer: NativeChatHandsFreeComposer,
+  /** A node inside this chat's composer, by which a dictation is known to land in it. */
+  inComposer: RefObject<HTMLElement | null>
+): void {
   const dictation = useAppStore((store) => store.dictationState)
   const meter = useDictationMeter()
   // A Voice mode call in any chat already holds the microphone.
@@ -34,6 +40,7 @@ function useHandsFreeTurns(spoken: NativeChatSpokenReplies, composer: NativeChat
   const check = useEffectEvent(() => {
     const action = turns.current?.next({
       dictation,
+      ownsDictation: dictationLandsInComposerOf(inComposer.current),
       userSpeaking: meter.isSpeaking,
       agentWorking: composer.agentWorking,
       voiceSpeaking: spoken.line !== null,
@@ -52,6 +59,14 @@ function useHandsFreeTurns(spoken: NativeChatSpokenReplies, composer: NativeChat
           'components.native-chat.spokenReplies.handsFreeUnused',
           'Stopped listening after {{seconds}} seconds without speech',
           { seconds: HANDS_FREE_NO_SPEECH_MS / 1000 }
+        )
+      )
+    } else if (action === 'close-unheard') {
+      spoken.setHandsFree(false)
+      toast.message(
+        translate(
+          'components.native-chat.spokenReplies.handsFreeUnheard',
+          'Stopped listening: the microphone picked up sound but no words, twice'
         )
       )
     } else if (action === 'give-up') {
@@ -87,7 +102,8 @@ export function NativeChatHandsFreeButton({
   composer: NativeChatHandsFreeComposer
 }): React.JSX.Element {
   const t = useTranslate()
-  useHandsFreeTurns(spoken, composer)
+  const inComposer = useRef<HTMLSpanElement>(null)
+  useHandsFreeTurns(spoken, composer, inComposer)
   const label = spoken.handsFree
     ? t('components.native-chat.spokenReplies.handsFreeStop', 'Stop listening for your turn')
     : t('components.native-chat.spokenReplies.handsFreeStart', 'Listen for your turn')
@@ -96,7 +112,7 @@ export function NativeChatHandsFreeButton({
     <Tooltip>
       <TooltipTrigger asChild>
         {/* A disabled button gets no pointer events, so the wrapper carries the hover. */}
-        <span className="inline-flex">
+        <span ref={inComposer} className="inline-flex">
           <Button
             type="button"
             variant={spoken.handsFree ? 'secondary' : 'ghost'}
@@ -122,7 +138,7 @@ export function NativeChatHandsFreeButton({
             ? label
             : t(
                 'components.native-chat.spokenReplies.handsFreeHint',
-                'Talk in turns without touching the keyboard. The microphone opens when {{agent}} has finished, your words are sent after a short pause, and the reply is read aloud. It stops after {{seconds}} seconds without speech.',
+                'Talk in turns without touching the keyboard. The microphone opens when {{agent}} has finished, and whatever it hears is sent to {{agent}} after a short pause, without asking. The reply is read aloud. It stops after {{seconds}} seconds without speech.',
                 { agent: spoken.agentLabel, seconds: HANDS_FREE_NO_SPEECH_MS / 1000 }
               )}
       </TooltipContent>

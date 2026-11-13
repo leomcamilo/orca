@@ -2,18 +2,27 @@ import type { DictationState } from '../../../../../../shared/speech-types'
 
 export type HandsFreeFacts = {
   dictation: DictationState
+  /** The running dictation writes into this chat's composer. */
+  ownsDictation: boolean
   /** The microphone's meter hears a voice right now. */
   userSpeaking: boolean
   agentWorking: boolean
-  /** A reply is being read aloud. */
+  /** A reply is being read aloud, or is about to be. */
   voiceSpeaking: boolean
   /** The composer would take a send. */
   canSend: boolean
   now: number
 }
 
-/** `close-unused`: nobody spoke into the open microphone. `give-up`: it would not open. */
-export type HandsFreeAction = 'open-microphone' | 'send' | 'close-unused' | 'give-up' | null
+/** `close-unused`: nobody spoke into the open microphone. `close-unheard`: what it heard held no
+ *  words, twice. `give-up`: it would not open. */
+export type HandsFreeAction =
+  | 'open-microphone'
+  | 'send'
+  | 'close-unused'
+  | 'close-unheard'
+  | 'give-up'
+  | null
 
 // The reply's last word must leave the room before the microphone opens on it.
 export const HANDS_FREE_SETTLE_MS = 600
@@ -30,12 +39,17 @@ type Phase =
   | { name: 'listening'; since: number; lastSpeechAt: number | null }
   | { name: 'sent'; since: number; sawWork: boolean }
 
+const RESTING: Phase = { name: 'resting', readySince: null }
+
 /** Takes turns with the agent by voice: opens the microphone once the agent has finished and its
  *  reply has been read, sends what was said after a pause, then waits for the next reply. The
- *  microphone stays closed while the agent works or speaks. */
+ *  microphone stays closed while the agent works or speaks. It sends only the dictation it opened
+ *  into its own composer; dictation the person starts anywhere is theirs, and this waits it out. */
 export class HandsFreeTurns {
-  private phase: Phase = { name: 'resting', readySince: null }
+  private phase: Phase = { ...RESTING }
   private failedOpens = 0
+  // Noise passes for speech at the meter, but sends nothing; it must not keep the microphone open.
+  private unheardSends = 0
 
   next(facts: HandsFreeFacts): HandsFreeAction {
     const { now } = facts
@@ -44,11 +58,6 @@ export class HandsFreeTurns {
     }
     const phase = this.phase
     if (phase.name === 'resting') {
-      // Dictation the person started is taken over: it sends itself after a pause too.
-      if (facts.dictation === 'listening') {
-        this.phase = { name: 'listening', since: now, lastSpeechAt: null }
-        return null
-      }
       const ready =
         facts.dictation === 'idle' && !facts.agentWorking && !facts.voiceSpeaking && facts.canSend
       if (!ready) {
@@ -64,19 +73,22 @@ export class HandsFreeTurns {
     }
     if (phase.name === 'opening') {
       if (facts.dictation === 'listening') {
+        // A dictation that lands elsewhere started in the same moment; it is not this chat's.
         this.failedOpens = 0
-        this.phase = { name: 'listening', since: now, lastSpeechAt: null }
+        this.phase = facts.ownsDictation
+          ? { name: 'listening', since: now, lastSpeechAt: null }
+          : { ...RESTING }
       } else if (facts.dictation === 'idle' && now - phase.since >= OPEN_TIMEOUT_MS) {
         // A microphone that will not open (no model, no permission) is not asked forever.
         this.failedOpens += 1
-        this.phase = { name: 'resting', readySince: null }
+        this.phase = { ...RESTING }
         return this.failedOpens >= 2 ? 'give-up' : null
       }
       return null
     }
     if (phase.name === 'listening') {
-      if (facts.dictation === 'idle') {
-        this.phase = { name: 'resting', readySince: null }
+      if (facts.dictation === 'idle' || !facts.ownsDictation) {
+        this.phase = { ...RESTING }
         return null
       }
       if (facts.dictation !== 'listening') {
@@ -96,10 +108,21 @@ export class HandsFreeTurns {
       return 'send'
     }
     phase.sawWork ||= facts.agentWorking
-    const answered = phase.sawWork ? !facts.agentWorking : now - phase.since >= SENT_WITHOUT_WORK_MS
-    if (facts.dictation === 'idle' && answered) {
-      this.phase = { name: 'resting', readySince: null }
+    if (facts.dictation !== 'idle') {
+      return null
     }
-    return null
+    if (phase.sawWork) {
+      this.unheardSends = 0
+      if (!facts.agentWorking) {
+        this.phase = { ...RESTING }
+      }
+      return null
+    }
+    if (now - phase.since < SENT_WITHOUT_WORK_MS) {
+      return null
+    }
+    this.unheardSends += 1
+    this.phase = { ...RESTING }
+    return this.unheardSends >= 2 ? 'close-unheard' : null
   }
 }

@@ -18,7 +18,20 @@ export type SpokenReplySynthesizer = {
 
 export type SpokenReplyLine = { owner: string; text: string }
 
-type Job = { owner: string; lines: string[]; pick: SpokenReplyVoicePick }
+type Job = { owner: string; lines: string[]; pick: () => SpokenReplyVoicePick }
+
+export type SpokenReplySpeechTiming = {
+  /** Runs the next reply after a cancel; a system that drops a line spoken right after one gets
+   *  a moment first. */
+  afterCancel: (next: () => void) => void
+  /** Runs a line once the system can speak it in the right voice. */
+  whenReady: (speak: () => void) => void
+}
+
+const AT_ONCE: SpokenReplySpeechTiming = {
+  afterCancel: (next) => next(),
+  whenReady: (speak) => speak()
+}
 
 function languageOf(tag: string): string {
   return tag.replace('_', '-').toLowerCase()
@@ -71,12 +84,11 @@ export class SpokenReplySpeech {
   constructor(
     private readonly synthesizer: SpokenReplySynthesizer,
     private readonly onLine: (line: SpokenReplyLine | null) => void,
-    /** Runs the next reply after a cancel; a system that drops a line spoken right after one
-     *  gets a moment first. */
-    private readonly afterCancel: (next: () => void) => void = (next) => next()
+    private readonly timing: SpokenReplySpeechTiming = AT_ONCE
   ) {}
 
-  say(owner: string, lines: readonly string[], pick: SpokenReplyVoicePick): void {
+  /** `pick` is asked when a line is spoken, since the system may list its voices after `say`. */
+  say(owner: string, lines: readonly string[], pick: () => SpokenReplyVoicePick): void {
     const spoken = lines.filter((line) => line.trim().length > 0)
     if (spoken.length === 0) {
       return
@@ -97,7 +109,7 @@ export class SpokenReplySpeech {
       this.synthesizer.cancel()
       this.onLine(null)
       this.settling = true
-      this.afterCancel(() => {
+      this.timing.afterCancel(() => {
         this.settling = false
         this.advance()
       })
@@ -117,19 +129,26 @@ export class SpokenReplySpeech {
   private speakLine(job: Job, line: number): void {
     const spoken = { job, line }
     this.current = spoken
+    // Published before any wait, so a line about to be spoken already counts as speech.
     this.onLine({ owner: job.owner, text: job.lines[line] })
-    this.synthesizer.speak(job.lines[line], job.pick, () => {
-      // A cancelled line still reports its end; only the one being spoken moves the queue.
+    this.timing.whenReady(() => {
+      // Silenced while it waited.
       if (this.current !== spoken) {
         return
       }
-      this.current = null
-      if (line + 1 < job.lines.length) {
-        this.speakLine(job, line + 1)
-        return
-      }
-      this.onLine(null)
-      this.advance()
+      this.synthesizer.speak(job.lines[line], job.pick(), () => {
+        // A cancelled line still reports its end; only the one being spoken moves the queue.
+        if (this.current !== spoken) {
+          return
+        }
+        this.current = null
+        if (line + 1 < job.lines.length) {
+          this.speakLine(job, line + 1)
+          return
+        }
+        this.onLine(null)
+        this.advance()
+      })
     })
   }
 }
