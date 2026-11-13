@@ -42,7 +42,7 @@ jobs:
           echo "LEO_VOICE_VERSION=$version" >>"$GITHUB_ENV"
 
       - name: Setup pnpm
-        uses: pnpm/setup@v2
+        uses: pnpm/setup@e62bed3a93faa9b07baad0c8f76b8391b86a3f89 # v2
         with:
           install: false
 
