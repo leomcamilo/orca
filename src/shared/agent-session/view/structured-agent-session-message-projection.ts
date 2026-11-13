@@ -23,6 +23,7 @@ import {
   agentSessionContextSequenceFor,
   isAgentSessionContextClear
 } from '../agent-session-context-clear'
+import { blocksWithoutSpokenReplyRequest } from '../../native-chat/spoken-replies/spoken-reply-request'
 
 /** Client echo until host publication; an acknowledged read past recordedCursor supersedes it. */
 export type StructuredAgentSessionOptimisticMessage = {
@@ -242,7 +243,7 @@ export function projectStructuredAgentSessionMessageRows(
               ? 'pending'
               : 'unknown',
           timestamp: entry.queuedAt,
-          blocks: entry.body.blocks,
+          blocks: blocksWithoutSpokenReplyRequest(entry.body.blocks),
           ...(entry.afterSequence !== undefined
             ? { journalPosition: { sequence: entry.afterSequence + 0.5, index: entry.queuedAt } }
             : {}),

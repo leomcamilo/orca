@@ -34,6 +34,7 @@ import {
   useCodexVoiceCatalog
 } from '../../native-chat/voice/codex-voice-catalog'
 import { VoiceCodexVoiceModeSettings } from './VoiceCodexVoiceModeSettings'
+import { VoiceSpokenRepliesSettings } from './VoiceSpokenRepliesSettings'
 
 type VoicePaneProps = {
   settings: GlobalSettings
@@ -369,6 +370,11 @@ export function VoicePane({
         voices={codexVoices}
         listing={codexVoicesListing}
         {...(codexVoiceSourceKnown ? { onRefresh: () => void refreshCodexVoiceCatalog() } : {})}
+        onUpdateVoiceSettings={updateVoiceSettings}
+      />
+
+      <VoiceSpokenRepliesSettings
+        voiceSettings={voiceSettings}
         onUpdateVoiceSettings={updateVoiceSettings}
       />
 

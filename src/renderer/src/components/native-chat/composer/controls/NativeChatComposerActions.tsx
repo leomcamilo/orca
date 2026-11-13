@@ -25,6 +25,8 @@ import type { NativeChatOptionPickerRequest } from '../../session/options/contro
 import type { NativeChatSteerChordPreview } from '../../../../../../shared/native-chat/input/use-native-chat-steer-chord-preview'
 import { NativeChatCodexVoiceButton } from '../../voice/NativeChatCodexVoiceButton'
 import { useNativeChatCodexVoiceControl } from '../../voice/use-native-chat-codex-voice'
+import { NativeChatSpokenReplyButton } from '../../voice/spoken-replies/NativeChatSpokenReplyButton'
+import { useNativeChatSpokenRepliesControl } from '../../voice/spoken-replies/use-native-chat-spoken-replies'
 
 export type NativeChatComposerActionsProps = {
   editSession?: { cancel: () => void }
@@ -101,6 +103,7 @@ export const NativeChatComposerActions = memo(function NativeChatComposerActions
   const t = useTranslate()
   useUiLanguageRevision()
   const voice = useNativeChatCodexVoiceControl()
+  const spokenReplies = useNativeChatSpokenRepliesControl()
   // Dictation and a voice call would both capture the microphone.
   const voiceHoldsMicrophone = !!voice?.call && voice.call.phase !== 'ended'
   const dictationDisabled = dictationUnavailable || (voiceHoldsMicrophone && !isDictating)
@@ -322,6 +325,15 @@ export const NativeChatComposerActions = memo(function NativeChatComposerActions
     { id: 'dictation', priority: 2, content: dictation },
     ...(voice && !editSession
       ? [{ id: 'voice', priority: 2, content: <NativeChatCodexVoiceButton voice={voice} /> }]
+      : []),
+    ...(spokenReplies && !editSession
+      ? [
+          {
+            id: 'spoken-replies',
+            priority: 2,
+            content: <NativeChatSpokenReplyButton spoken={spokenReplies} />
+          }
+        ]
       : []),
     ...(draftNotSaved
       ? [{ id: 'draft', priority: 1, content: <NativeChatComposerDraftNotSavedIcon shown /> }]
