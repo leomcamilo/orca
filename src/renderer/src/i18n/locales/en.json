@@ -12077,7 +12077,10 @@
               "cleanupScratchKeyword": "scratch that",
               "codexVoiceModeDescription": "Choose the voice Codex speaks with in Voice mode.",
               "codexVoiceModeKeyword": "codex",
-              "codexVoiceModeTalkKeyword": "talk"
+              "codexVoiceModeTalkKeyword": "talk",
+              "spokenRepliesDescription": "Hear replies read aloud with a system voice.",
+              "spokenRepliesSpeakKeyword": "speak",
+              "spokenRepliesReadAloudKeyword": "read aloud"
             }
           }
         },
@@ -21629,6 +21632,18 @@
         "endShort": "End",
         "voiceUnavailable": "This chat's Codex doesn't offer the voice {{voice}}, so its default voice speaks.",
         "defaultVoiceSpeaking": "Codex default voice"
+      },
+      "spokenReplies": {
+        "start": "Read replies aloud",
+        "stop": "Stop reading replies aloud",
+        "startHint": "Read replies aloud with your system voice. Each message you send also asks {{agent}} to open its reply with a short part meant for listening.",
+        "speaking": "Reading the reply aloud",
+        "silence": "Stop speaking",
+        "silenceShort": "Quiet",
+        "silenceHint": "Stops the voice. {{agent}} keeps working.",
+        "approval": "{{agent}} needs your approval: {{title}}",
+        "question": "{{agent}} asks: {{question}}",
+        "restOnScreen": "The rest is on screen."
       }
     },
     "tab": {
@@ -22306,6 +22321,18 @@
           "voicesUnlisted": "Send a message in a Codex chat, then list voices again.",
           "defaultVoice": "Codex default",
           "refresh": "List voices again"
+        },
+        "spokenReplies": {
+          "title": "Spoken replies (experimental)",
+          "description": "Hear the opening of each reply in Claude, OpenCode and other chats. Separate from dictation and from Codex Voice mode.",
+          "sample": "Play a sample",
+          "enableLabel": "Offer spoken replies",
+          "unavailable": "This system has no speech voice installed.",
+          "enableDescription": "Adds a speaker button to the chat. While it is on, each message you send also asks the agent to open its reply with a short part meant for listening, and your system voice reads that part. Code, tables and links stay on screen.",
+          "voiceLabel": "Voice",
+          "voiceDescription": "A voice installed on this computer. Automatic follows your dictation or app language.",
+          "sampleText": "This is how replies will sound.",
+          "automaticVoice": "Automatic"
         }
       },
       "repositoryHooks": {

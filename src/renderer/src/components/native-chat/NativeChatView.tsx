@@ -8,6 +8,7 @@ import { NativeChatVisualOwnerProvider } from './media/visuals/native-chat-visua
 import { NativeChatFileLinkExistenceProvider } from './links/actions/use-native-chat-file-link-existence'
 import { NativeChatMarkdownImageOwnerProvider } from './media/images/native-chat-markdown-image-owner'
 import { NativeChatCodexVoiceProvider } from './voice/NativeChatCodexVoiceProvider'
+import { NativeChatSpokenRepliesProvider } from './voice/spoken-replies/NativeChatSpokenRepliesProvider'
 
 export default function NativeChatView(props: NativeChatViewProps): React.JSX.Element {
   return (
@@ -26,7 +27,9 @@ export default function NativeChatView(props: NativeChatViewProps): React.JSX.El
               sessionId={props.sessionId}
             >
               <NativeChatCodexVoiceProvider pane={props}>
-                <NativeChatStructuredSession {...props} />
+                <NativeChatSpokenRepliesProvider pane={props}>
+                  <NativeChatStructuredSession {...props} />
+                </NativeChatSpokenRepliesProvider>
               </NativeChatCodexVoiceProvider>
             </NativeChatMarkdownImageOwnerProvider>
           </NativeChatFileLinkExistenceProvider>

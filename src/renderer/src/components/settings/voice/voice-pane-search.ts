@@ -3,6 +3,7 @@ import { translate } from '@/i18n/i18n'
 import { translateSearchKeyword } from '../search/settings-search-keywords'
 import { createLocalizedCatalog } from '@/i18n/localized-catalog'
 import { getCodexVoiceModeSearchEntry } from './codex-voice-mode-pane-search'
+import { getSpokenRepliesSearchEntry } from './spoken-replies-pane-search'
 
 export const VOICE_SETTING_ANCHORS = {
   mode: 'voice-dictation-mode',
@@ -266,6 +267,7 @@ export const getVoicePaneSearchEntries = createLocalizedCatalog(() => [
     ]
   },
   getCodexVoiceModeSearchEntry(),
+  getSpokenRepliesSearchEntry(),
   getOpenaiTranscriptionSearchEntry(),
   {
     title: translate('auto.components.settings.voice.pane.search.7f5a2416a6', 'Speech model'),

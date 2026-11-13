@@ -6860,7 +6860,10 @@
               "gpuKeyword": "placa de vídeo",
               "codexVoiceModeDescription": "Escolha a voz com que o Codex fala no Modo de Voz.",
               "codexVoiceModeKeyword": "codex",
-              "codexVoiceModeTalkKeyword": "conversar"
+              "codexVoiceModeTalkKeyword": "conversar",
+              "spokenRepliesDescription": "Ouça as respostas lidas em voz alta com uma voz do sistema.",
+              "spokenRepliesSpeakKeyword": "falar",
+              "spokenRepliesReadAloudKeyword": "ler em voz alta"
             }
           }
         },
@@ -21776,6 +21779,18 @@
         "endShort": "Encerrar",
         "voiceUnavailable": "O Codex desta conversa não oferece a voz {{voice}}, então fala a voz padrão dele.",
         "defaultVoiceSpeaking": "Voz padrão do Codex"
+      },
+      "spokenReplies": {
+        "start": "Ler respostas em voz alta",
+        "stop": "Parar de ler respostas em voz alta",
+        "startHint": "Lê as respostas em voz alta com a voz do sistema. Cada mensagem enviada também pede ao {{agent}} que abra a resposta com um trecho curto, feito para ouvir.",
+        "speaking": "Lendo a resposta em voz alta",
+        "silence": "Parar de falar",
+        "silenceShort": "Calar",
+        "silenceHint": "Cala a voz. O {{agent}} continua trabalhando.",
+        "approval": "{{agent}} precisa da sua aprovação: {{title}}",
+        "question": "{{agent}} pergunta: {{question}}",
+        "restOnScreen": "O restante está na tela."
       }
     },
     "tab": {
@@ -22381,6 +22396,18 @@
           "voicesUnlisted": "Envie uma mensagem numa conversa do Codex e liste as vozes de novo.",
           "defaultVoice": "Padrão do Codex",
           "refresh": "Listar vozes de novo"
+        },
+        "spokenReplies": {
+          "title": "Respostas faladas (experimental)",
+          "description": "Ouça a abertura de cada resposta nos chats do Claude, do OpenCode e de outros agentes. Separado do ditado e do Modo de Voz do Codex.",
+          "sample": "Tocar uma amostra",
+          "enableLabel": "Oferecer respostas faladas",
+          "unavailable": "Este sistema não tem voz de fala instalada.",
+          "enableDescription": "Adiciona um botão de alto-falante ao chat. Com ele ligado, cada mensagem enviada também pede ao agente que abra a resposta com um trecho curto, feito para ouvir, e a voz do sistema lê esse trecho. Código, tabelas e links ficam na tela.",
+          "voiceLabel": "Voz",
+          "voiceDescription": "Uma voz instalada neste computador. Automática segue o idioma do ditado ou do app.",
+          "sampleText": "É assim que as respostas vão soar.",
+          "automaticVoice": "Automática"
         }
       },
       "repositoryHooks": {

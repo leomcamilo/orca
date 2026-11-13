@@ -148,6 +148,10 @@ export type VoiceSettings = {
   dictationCorrectionWord?: string
   /** Codex Voice mode's voice, as Codex lists it. Absent = Codex's configured or built-in voice. */
   codexVoice?: string
+  /** Offers reading replies aloud in chats other than Codex's. Absent = off. */
+  spokenReplies?: boolean
+  /** The system voice that reads replies, by its URI. Absent, or a voice the system no longer has = one chosen by language. */
+  spokenReplyVoice?: string
 }
 
 /** Where a dictation goes: an engine in the desktop's own process takes repoTerms, a host resolves worktreeId itself. */

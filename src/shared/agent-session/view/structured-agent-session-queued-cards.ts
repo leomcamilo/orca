@@ -1,6 +1,7 @@
 // Derive hold labels on the client; the wire carries queue state, not presentation wording.
 
 import { agentMessageDisplayText } from '../agent-message-display-text'
+import { withoutSpokenReplyRequest } from '../../native-chat/spoken-replies/spoken-reply-request'
 import {
   readWholeAgentSessionFailureFact,
   type AgentSessionFailureFact,
@@ -63,7 +64,9 @@ export type QueuedMessageCard = {
 }
 
 export function queuedMessageCardText(body: AgentSessionQueuedMessage['body']): string {
-  return body.blocks.flatMap((block) => (block.type === 'text' ? [block.text] : [])).join('\n')
+  return withoutSpokenReplyRequest(
+    body.blocks.flatMap((block) => (block.type === 'text' ? [block.text] : [])).join('\n')
+  )
 }
 
 export function queuedMessageCardImages(
