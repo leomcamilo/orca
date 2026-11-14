@@ -27,6 +27,11 @@ export function createAppVoiceSynthesizer(deps: {
   // Renders asked for ahead of their line, so one sentence follows another without a gap.
   const rendering = new Map<string, Promise<Uint8Array | null>>()
   const render = (text: string, pick: SpokenReplyVoicePick): Promise<Uint8Array | null> => {
+    // The host renders in a named voice only; without one, the system speaks directly, where the
+    // language still tells it which voice to use.
+    if (!pick.voice) {
+      return Promise.resolve(null)
+    }
     const key = `${pick.voice?.voiceURI ?? ''}\n${text}`
     const asked = rendering.get(key)
     if (asked) {
@@ -79,6 +84,9 @@ export function createAppVoiceSynthesizer(deps: {
     speak,
     prepare: (lines, pick) => {
       rendering.clear()
+      if (!pick.voice) {
+        return
+      }
       for (const text of lines) {
         const key = `${pick.voice?.voiceURI ?? ''}\n${text}`
         const asked = deps.render({ text, ...(pick.voice ? { voice: pick.voice.voiceURI } : {}) })
