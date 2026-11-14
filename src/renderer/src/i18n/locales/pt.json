@@ -21841,7 +21841,9 @@
           "noServer": "Nenhum servidor de voz está configurado. Configure um em Ajustes > Voz.",
           "noServiceKey": "Ler respostas com {{service}} exige a chave de API do serviço. Adicione em Ajustes > Voz.",
           "overLimit": "O limite deste mês para vozes pagas foi atingido, então nada foi enviado. Aumente em Ajustes > Voz.",
-          "missingPermission": "A chave salva de {{service}} não tem permissão para ler texto em voz alta. Libere Text to Speech para ela em {{service}}."
+          "missingPermission": "A chave salva de {{service}} não tem permissão para ler texto em voz alta. Libere Text to Speech para ela em {{service}}.",
+          "paidPlan": "O plano desta conta de {{service}} não inclui esta voz ou este recurso pela API. Escolha uma voz da sua própria conta ou mude de plano.",
+          "voiceNotFound": "{{service}} não tem voz com o ID escolhido. Escolha outra em Ajustes > Voz."
         }
       }
     },
@@ -22460,6 +22462,8 @@
           "voiceDescription": "Uma voz instalada neste computador. Automática segue o idioma do ditado ou do app.",
           "sampleText": "É assim que as respostas vão soar.",
           "automaticVoice": "Automática",
+          "interruptLabel": "Interromper falando",
+          "interruptDescription": "Enquanto um chat escuta a sua vez, o microfone fica aberto durante a leitura e o que você disser é enviado quando a resposta termina. Com isto ligado, suas palavras param a leitura na hora. O que repete a resposta é descartado como eco, mas uma voz tocada no alto-falante ainda pode interromper a si mesma.",
           "providerLabel": "Quem lê",
           "providerDescription": "A voz do sistema roda neste computador. As outras recebem o texto que vão ler.",
           "providerSystem": "Voz do sistema",
@@ -22475,7 +22479,7 @@
           "elevenLabsKeyMissing": "Nenhuma chave de API da ElevenLabs está salva, então nada será lido.",
           "changeKey": "Trocar chave",
           "elevenLabsVoiceLabel": "Voz da ElevenLabs",
-          "elevenLabsVoiceDescription": "Da sua conta da ElevenLabs. As vozes multilíngues leem português do Brasil.",
+          "elevenLabsVoiceDescription": "Da sua conta da ElevenLabs, ou cole o ID de uma voz. As vozes multilíngues leem português do Brasil.",
           "listVoicesAgain": "Listar vozes de novo",
           "chooseVoice": "Escolha uma voz",
           "elevenLabsModelLabel": "Modelo",

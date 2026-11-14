@@ -69,12 +69,15 @@ export type SpeechSynthesisRequest = {
 }
 
 /** `no-key`: nothing is saved to reach the service. `missing-permission`: the key works but is
- *  not allowed this operation. `over-limit`: the month's character limit for paid services would
+ *  not allowed this operation. `paid-plan`: the account's plan does not include the voice or
+ *  feature through the API. `over-limit`: the month's character limit for paid services would
  *  be passed, so nothing was sent. */
 export type SpeechSynthesisFailure =
   | 'no-key'
   | 'unauthorized'
   | 'missing-permission'
+  | 'paid-plan'
+  | 'voice-not-found'
   | 'quota'
   | 'rate-limited'
   | 'over-limit'

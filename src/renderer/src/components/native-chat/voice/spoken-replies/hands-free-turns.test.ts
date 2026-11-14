@@ -8,15 +8,16 @@ const quiet: Omit<HandsFreeFacts, 'now'> = {
   agentWorking: false,
   voiceSpeaking: false,
   canSend: true,
-  hasDraft: false
+  hasDraft: false,
+  interrupts: false
 }
 const mine: Omit<HandsFreeFacts, 'now'> = { ...quiet, dictation: 'listening', ownsDictation: true }
 const elsewhere: Omit<HandsFreeFacts, 'now'> = { ...quiet, dictation: 'listening' }
 
 describe('HandsFreeTurns', () => {
-  it('opens the microphone after the reply, sends after a pause, and waits for the next reply', () => {
+  it('opens the microphone after the work, sends after a pause, and listens over the reply', () => {
     const turns = new HandsFreeTurns()
-    expect(turns.next({ ...quiet, voiceSpeaking: true, now: 0 })).toBeNull()
+    expect(turns.next({ ...quiet, agentWorking: true, now: 0 })).toBeNull()
     expect(turns.next({ ...quiet, now: 100 })).toBeNull()
     expect(turns.next({ ...quiet, now: 700 })).toBe('open-microphone')
     expect(turns.next({ ...mine, now: 900 })).toBeNull()
@@ -31,13 +32,58 @@ describe('HandsFreeTurns', () => {
 
     expect(turns.next({ ...quiet, dictation: 'stopping', now: 10_500 })).toBeNull()
     expect(turns.next({ ...quiet, agentWorking: true, now: 11_000 })).toBeNull()
-    // While the agent works or speaks, only a change moves the turn: nothing is timed.
+    // While the agent works, only a change moves the turn: nothing is timed.
     expect(turns.deadline()).toBeNull()
-    expect(turns.next({ ...quiet, voiceSpeaking: true, now: 61_000 })).toBeNull()
+    // The reply starts reading as the work ends, and the microphone opens over it.
+    expect(turns.next({ ...quiet, voiceSpeaking: true, now: 61_000 })).toBe('overhear')
+    expect(turns.next({ ...mine, voiceSpeaking: true, now: 61_300 })).toBeNull()
+    // The meter hears the reply too: while it is read, nothing is timed and nothing is sent.
+    expect(turns.next({ ...mine, voiceSpeaking: true, userSpeaking: true, now: 62_000 })).toBeNull()
     expect(turns.deadline()).toBeNull()
-    expect(turns.next({ ...quiet, now: 65_000 })).toBeNull()
-    expect(turns.deadline()).toBe(65_600)
-    expect(turns.next({ ...quiet, now: 65_600 })).toBe('open-microphone')
+    // Words of the person's land over the reply, and it plays on.
+    expect(turns.next({ ...mine, voiceSpeaking: true, hasDraft: true, now: 64_000 })).toBeNull()
+    expect(turns.overhears()).toBe(true)
+    // They go out once the reply ends, after a pause.
+    expect(turns.next({ ...mine, hasDraft: true, now: 70_000 })).toBeNull()
+    expect(turns.overhears()).toBe(false)
+    expect(turns.deadline()).toBe(71_400)
+    expect(turns.next({ ...mine, hasDraft: true, now: 71_400 })).toBe('send')
+  })
+
+  it('sends words said over the reply that land only after it ends', () => {
+    const turns = new HandsFreeTurns()
+    expect(turns.next({ ...quiet, voiceSpeaking: true, now: 0 })).toBe('overhear')
+    turns.next({ ...mine, voiceSpeaking: true, now: 300 })
+    // The reply ends before what was said over it is transcribed; the meter hears nothing more.
+    expect(turns.next({ ...mine, now: 5000 })).toBeNull()
+    expect(turns.next({ ...mine, hasDraft: true, now: 6000 })).toBeNull()
+    expect(turns.deadline()).toBe(7400)
+    expect(turns.next({ ...mine, hasDraft: true, now: 7400 })).toBe('send')
+  })
+
+  it('stops a reply for words of the person only when they asked to interrupt', () => {
+    const waits = new HandsFreeTurns()
+    waits.next({ ...quiet, voiceSpeaking: true, now: 0 })
+    waits.next({ ...mine, voiceSpeaking: true, now: 300 })
+    for (let now = 1000; now <= 60_000; now += 1000) {
+      const words = { userSpeaking: now % 2000 === 0, hasDraft: now > 3000 }
+      expect(waits.next({ ...mine, ...words, voiceSpeaking: true, now })).toBeNull()
+      expect(waits.overhears()).toBe(true)
+    }
+
+    const interrupts = { ...mine, interrupts: true }
+    const stops = new HandsFreeTurns()
+    stops.next({ ...quiet, interrupts: true, voiceSpeaking: true, now: 0 })
+    stops.next({ ...interrupts, voiceSpeaking: true, now: 300 })
+    // The meter alone hears the reply too, so it stops nothing.
+    expect(
+      stops.next({ ...interrupts, voiceSpeaking: true, userSpeaking: true, now: 1000 })
+    ).toBeNull()
+    expect(stops.next({ ...interrupts, voiceSpeaking: true, hasDraft: true, now: 2000 })).toBe(
+      'interrupt-voice'
+    )
+    expect(stops.next({ ...interrupts, hasDraft: true, now: 2100 })).toBeNull()
+    expect(stops.next({ ...interrupts, hasDraft: true, now: 3400 })).toBe('send')
   })
 
   it('never sends for a dictation the person started somewhere else', () => {
@@ -58,18 +104,6 @@ describe('HandsFreeTurns', () => {
     turns.next({ ...mine, now: 13_800 })
     turns.next({ ...mine, userSpeaking: true, now: 14_000 })
     expect(turns.next({ ...elsewhere, now: 16_000 })).toBeNull()
-  })
-
-  it('keeps the microphone closed while a reply is spoken or about to be', () => {
-    const turns = new HandsFreeTurns()
-    expect(turns.next({ ...quiet, voiceSpeaking: true, now: 0 })).toBeNull()
-    expect(turns.next({ ...quiet, voiceSpeaking: true, now: 5000 })).toBeNull()
-    // The settle time starts over once the voice stops.
-    expect(turns.next({ ...quiet, now: 5100 })).toBeNull()
-    expect(turns.next({ ...quiet, voiceSpeaking: true, now: 5400 })).toBeNull()
-    expect(turns.next({ ...quiet, now: 5500 })).toBeNull()
-    expect(turns.next({ ...quiet, now: 6000 })).toBeNull()
-    expect(turns.next({ ...quiet, now: 6100 })).toBe('open-microphone')
   })
 
   it('closes a microphone nobody talks into, or that hears sound without words twice', () => {

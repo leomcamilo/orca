@@ -8,7 +8,7 @@ import { dictationLandsInComposerOf } from '@/components/dictation/use-dictation
 import { isDictationUnderway } from '../../../../../../shared/dictation-session-machine'
 import { useVoiceCallPresence } from '../voice-call-presence'
 import { HANDS_FREE_NO_SPEECH_MS, HandsFreeTurns } from './hands-free-turns'
-import { setWaitsForEmptyComposer } from './spoken-reply-mode'
+import { setOverhearing, setWaitsForEmptyComposer } from './spoken-reply-mode'
 import type { NativeChatSpokenReplies } from './use-native-chat-spoken-replies'
 
 export type NativeChatHandsFreeComposer = {
@@ -39,6 +39,7 @@ export function useHandsFreeTurns(
   const inCall = useVoiceCallPresence((state) => state.calls > 0)
   const voiceSpeaking = spoken.line !== null
   const canSend = composer.canSend && !composer.dictationUnavailable && !inCall
+  const interrupts = useAppStore((store) => store.settings?.voice?.spokenReplyInterrupt === true)
   const turns = useRef<HandsFreeTurns | null>(null)
   // Moved by the timer alone, to look again at the turn's next deadline.
   const [woken, setWoken] = useState(0)
@@ -52,10 +53,17 @@ export function useHandsFreeTurns(
       voiceSpeaking,
       canSend,
       hasDraft: composer.hasDraft,
+      interrupts,
       now: Date.now()
     })
-    if (action === 'open-microphone') {
+    if (action === 'overhear') {
+      // Marked before the microphone opens, so its dictation does not quiet the reply.
+      setOverhearing(spoken.sessionId, true)
       composer.onOpenMicrophone()
+    } else if (action === 'open-microphone') {
+      composer.onOpenMicrophone()
+    } else if (action === 'interrupt-voice') {
+      spoken.silence()
     } else if (action === 'send') {
       composer.onSend()
     } else if (action === 'close-unused') {
@@ -86,6 +94,7 @@ export function useHandsFreeTurns(
       )
     }
     setWaitsForEmptyComposer(spoken.sessionId, turns.current?.waitsForEmptyComposer() === true)
+    setOverhearing(spoken.sessionId, turns.current?.overhears() === true)
     return turns.current?.deadline() ?? null
   })
 
@@ -100,6 +109,7 @@ export function useHandsFreeTurns(
     return () => {
       turns.current = null
       setWaitsForEmptyComposer(sessionId, false)
+      setOverhearing(sessionId, false)
       // The microphone this chat opened closes with its listening, however that ends: Stop
       // listening, the chat hidden, another chat listening, the composer gone. A dictation the
       // person started is not this turn's, and stays.
@@ -130,6 +140,7 @@ export function useHandsFreeTurns(
     composer.hasDraft,
     voiceSpeaking,
     canSend,
+    interrupts,
     woken
   ])
 }

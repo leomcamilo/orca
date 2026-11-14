@@ -163,6 +163,9 @@ export type VoiceSettings = {
   /** Characters the paid speech services may read in a month; null = no limit. Absent = the
    *  built-in default. */
   spokenReplyMonthlyCharacterLimit?: number | null
+  /** While the chat listens for the person's turn, their words stop a reply being read instead
+   *  of going out after it. Absent = off. */
+  spokenReplyInterrupt?: boolean
 }
 
 /** Where a dictation goes: an engine in the desktop's own process takes repoTerms, a host resolves worktreeId itself. */

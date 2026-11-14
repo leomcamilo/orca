@@ -122,6 +122,20 @@ export function VoiceSpokenRepliesSettings({
           }
         />
       )}
+      <SettingsSwitchRow
+        label={t('components.settings.voice.spokenReplies.interruptLabel', 'Interrupt by speaking')}
+        description={t(
+          'components.settings.voice.spokenReplies.interruptDescription',
+          'While a chat listens for your turn, the microphone stays open as a reply is read, and what you say is sent when the reply ends. With this on, your words stop the reply at once. Words that repeat the reply are dropped as its echo, but a voice played through speakers can still stop itself.'
+        )}
+        checked={voiceSettings.spokenReplyInterrupt === true}
+        disabled={unavailable}
+        onChange={() =>
+          onUpdateVoiceSettings({
+            spokenReplyInterrupt: voiceSettings.spokenReplyInterrupt !== true
+          })
+        }
+      />
     </SettingsGroup>
   )
 }

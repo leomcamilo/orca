@@ -130,11 +130,11 @@ export function VoiceSpokenReplyElevenLabsSettings({
                 )
               : t(
                   'components.settings.voice.spokenReplies.elevenLabsVoiceDescription',
-                  'From your ElevenLabs account. Multilingual voices read Brazilian Portuguese.'
+                  'From your ElevenLabs account, or paste a voice ID. Multilingual voices read Brazilian Portuguese.'
                 )
         }
         control={
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             <Button
               type="button"
               variant="ghost"
@@ -152,31 +152,30 @@ export function VoiceSpokenReplyElevenLabsSettings({
               voiceSettings={voiceSettings}
               disabled={disabled || !configured || !chosenVoice}
             />
-            {listFailure ? (
-              <Input
-                aria-labelledby={voiceLabelId}
-                className="h-8 w-48"
-                value={voiceIdDraft}
-                placeholder={t(
-                  'components.settings.voice.spokenReplies.voiceIdPlaceholder',
-                  'Voice ID'
-                )}
-                disabled={disabled}
-                onChange={(event) => setVoiceIdDraft(event.target.value)}
-                onBlur={() => {
-                  const id = voiceIdDraft.trim()
-                  if (id !== (chosenVoice ?? '')) {
-                    onUpdateVoiceSettings({ spokenReplyElevenLabsVoice: id || undefined })
-                  }
-                }}
-              />
-            ) : null}
+            <Input
+              aria-labelledby={voiceLabelId}
+              className="h-8 w-48"
+              value={voiceIdDraft}
+              placeholder={t(
+                'components.settings.voice.spokenReplies.voiceIdPlaceholder',
+                'Voice ID'
+              )}
+              disabled={disabled}
+              onChange={(event) => setVoiceIdDraft(event.target.value)}
+              onBlur={() => {
+                const id = voiceIdDraft.trim()
+                if (id !== (chosenVoice ?? '')) {
+                  onUpdateVoiceSettings({ spokenReplyElevenLabsVoice: id || undefined })
+                }
+              }}
+            />
             <Select
               value={chosenVoice ?? ''}
               disabled={disabled || voiceOptions.length === 0}
-              onValueChange={(value) =>
+              onValueChange={(value) => {
+                setVoiceIdDraft(value)
                 onUpdateVoiceSettings({ spokenReplyElevenLabsVoice: value })
-              }
+              }}
             >
               <SelectTrigger size="sm" className="min-w-40" aria-labelledby={voiceLabelId}>
                 <SelectValue

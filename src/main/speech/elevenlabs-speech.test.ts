@@ -63,6 +63,33 @@ describe('synthesizeElevenLabsSpeech', () => {
     ).toMatchObject({ ok: false, failure: 'refused' })
     expect(sent).toHaveLength(0)
   })
+
+  it('names what the account lacks by the error code, before the HTTP status', async () => {
+    const said = (detail: { code: string; message?: string }, status: number) =>
+      answer(() => new Response(JSON.stringify({ detail }), { status }))
+    const signal = new AbortController().signal
+    said(
+      {
+        code: 'paid_plan_required',
+        message: 'Free users cannot use library voices via the API.'
+      },
+      402
+    )
+    expect(await synthesizeElevenLabsSpeech(LINE, signal)).toMatchObject({
+      ok: false,
+      failure: 'paid-plan'
+    })
+    said({ code: 'voice_not_found' }, 404)
+    expect(await synthesizeElevenLabsSpeech(LINE, signal)).toMatchObject({
+      ok: false,
+      failure: 'voice-not-found'
+    })
+    said({ code: 'insufficient_permissions' }, 403)
+    expect(await synthesizeElevenLabsSpeech(LINE, signal)).toMatchObject({
+      ok: false,
+      failure: 'missing-permission'
+    })
+  })
 })
 
 describe('listElevenLabsVoices', () => {

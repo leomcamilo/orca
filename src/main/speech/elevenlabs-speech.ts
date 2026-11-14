@@ -2,7 +2,11 @@ import { createEncryptedApiKeyFileStore } from '../credentials/encrypted-api-key
 import { getMainHttpClient } from '../network/http-client'
 import { readSpeechAudio } from './speech-audio-response'
 import { sanitizeOpenAiTranscriptionErrorMessage } from './openai-transcription-client'
-import type { ElevenLabsVoiceListing, SpeechSynthesisResult } from '../../shared/speech-synthesis'
+import type {
+  ElevenLabsVoiceListing,
+  SpeechSynthesisFailure,
+  SpeechSynthesisResult
+} from '../../shared/speech-synthesis'
 
 const store = createEncryptedApiKeyFileStore({
   fileName: 'elevenlabs-speech-key.enc',
@@ -34,29 +38,43 @@ function readKey(): string | null {
 
 type SpeechFailure = Extract<SpeechSynthesisResult, { ok: false }>
 
+// The error's own name says more than its HTTP status: a restricted key answers 401 or 403, and
+// a free plan asking for a library voice answers 402, as an account out of credit does.
+const FAILURE_BY_CODE = new Map<string, SpeechSynthesisFailure>([
+  ['missing_permissions', 'missing-permission'],
+  ['insufficient_permissions', 'missing-permission'],
+  ['paid_plan_required', 'paid-plan'],
+  ['subscription_required', 'paid-plan'],
+  ['feature_not_available', 'paid-plan'],
+  ['voice_not_found', 'voice-not-found'],
+  ['quota_exceeded', 'quota'],
+  ['insufficient_credits', 'quota'],
+  ['invalid_api_key', 'unauthorized']
+])
+const FAILURE_BY_STATUS = new Map<number, SpeechSynthesisFailure>([
+  [401, 'unauthorized'],
+  [402, 'quota'],
+  [429, 'rate-limited']
+])
+
+/** What ElevenLabs puts in an error body's `detail`, as far as it is read here. */
+type ElevenLabsErrorDetail = { code?: unknown; status?: unknown; message?: unknown }
+
+function textOf(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
 async function failureOf(response: Response, apiKey: string): Promise<SpeechFailure> {
   const data: { detail?: unknown } = await response.json().catch(() => ({}))
-  const detail = typeof data.detail === 'object' && data.detail !== null ? data.detail : {}
-  const status = 'status' in detail && typeof detail.status === 'string' ? detail.status : ''
-  const raw = 'message' in detail && typeof detail.message === 'string' ? detail.message : ''
+  const detail: ElevenLabsErrorDetail =
+    typeof data.detail === 'object' && data.detail !== null ? data.detail : {}
+  // Older answers name the error in `status`.
+  const code = textOf(detail.code) || textOf(detail.status)
+  const raw = textOf(detail.message)
   const message = raw ? sanitizeOpenAiTranscriptionErrorMessage(raw, apiKey) : undefined
-  const withMessage = message ? { message } : {}
-  // A restricted key answers 401 or 403 with this status, naming the permission it lacks.
-  if (status === 'missing_permissions') {
-    return { ok: false, failure: 'missing-permission', ...withMessage }
-  }
-  if (response.status === 401) {
-    return {
-      ok: false,
-      failure: status === 'quota_exceeded' ? 'quota' : 'unauthorized',
-      ...withMessage
-    }
-  }
-  if (response.status === 402) {
-    return { ok: false, failure: 'quota', ...withMessage }
-  }
-  if (response.status === 429) {
-    return { ok: false, failure: 'rate-limited', ...withMessage }
+  const failure = FAILURE_BY_CODE.get(code) ?? FAILURE_BY_STATUS.get(response.status)
+  if (failure) {
+    return { ok: false, failure, ...(message ? { message } : {}) }
   }
   return {
     ok: false,

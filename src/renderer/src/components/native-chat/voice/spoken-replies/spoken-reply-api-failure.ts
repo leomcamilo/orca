@@ -38,6 +38,18 @@ function failureText(
         'The saved {{service}} key is not allowed to read text aloud. Allow Text to Speech for it at {{service}}.',
         { service }
       )
+    case 'paid-plan':
+      return translate(
+        'components.native-chat.spokenReplies.apiFailure.paidPlan',
+        'The plan of this {{service}} account does not include this voice or feature through the API. Choose a voice from your own account, or change plans.',
+        { service }
+      )
+    case 'voice-not-found':
+      return translate(
+        'components.native-chat.spokenReplies.apiFailure.voiceNotFound',
+        '{{service}} has no voice with the chosen ID. Choose another in Settings > Voice.',
+        { service }
+      )
     case 'over-limit':
       return translate(
         'components.native-chat.spokenReplies.apiFailure.overLimit',

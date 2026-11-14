@@ -21587,7 +21587,9 @@
           "noServer": "No voice server is set up. Set one up in Settings > Voice.",
           "noServiceKey": "Reading replies with {{service}} needs its API key. Add it in Settings > Voice.",
           "overLimit": "This month's limit for paid voices is reached, so nothing was sent. Raise it in Settings > Voice.",
-          "missingPermission": "The saved {{service}} key is not allowed to read text aloud. Allow Text to Speech for it at {{service}}."
+          "missingPermission": "The saved {{service}} key is not allowed to read text aloud. Allow Text to Speech for it at {{service}}.",
+          "paidPlan": "The plan of this {{service}} account does not include this voice or feature through the API. Choose a voice from your own account, or change plans.",
+          "voiceNotFound": "{{service}} has no voice with the chosen ID. Choose another in Settings > Voice."
         }
       }
     },
@@ -22278,6 +22280,8 @@
           "voiceDescription": "A voice installed on this computer. Automatic follows your dictation or app language.",
           "sampleText": "This is how replies will sound.",
           "automaticVoice": "Automatic",
+          "interruptLabel": "Interrupt by speaking",
+          "interruptDescription": "While a chat listens for your turn, the microphone stays open as a reply is read, and what you say is sent when the reply ends. With this on, your words stop the reply at once. Words that repeat the reply are dropped as its echo, but a voice played through speakers can still stop itself.",
           "providerLabel": "Read by",
           "providerDescription": "The system voice runs on this computer. The others receive the text they read.",
           "providerSystem": "System voice",
@@ -22293,7 +22297,7 @@
           "elevenLabsKeyMissing": "No ElevenLabs API key is saved, so nothing will be read.",
           "changeKey": "Change key",
           "elevenLabsVoiceLabel": "ElevenLabs voice",
-          "elevenLabsVoiceDescription": "From your ElevenLabs account. Multilingual voices read Brazilian Portuguese.",
+          "elevenLabsVoiceDescription": "From your ElevenLabs account, or paste a voice ID. Multilingual voices read Brazilian Portuguese.",
           "listVoicesAgain": "List voices again",
           "chooseVoice": "Choose a voice",
           "elevenLabsModelLabel": "Model",

@@ -2,6 +2,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '@/store'
+import { getDefaultSettings, getDefaultVoiceSettings } from '../../../../../../shared/constants'
 import {
   publishDictationMeter,
   resetDictationMeter
@@ -37,7 +38,7 @@ afterEach(() => {
   document.removeEventListener(DICTATION_CONTROL_EVENT, recordControl)
   vi.useRealTimers()
   resetDictationMeter()
-  useAppStore.setState({ dictationState: 'idle' })
+  useAppStore.setState({ dictationState: 'idle', settings: null })
 })
 
 type Chat = { line: string | null; agentWorking: boolean; handsFree?: boolean; hasDraft?: boolean }
@@ -56,7 +57,7 @@ function listenForTurns() {
     waitsForEmptyComposer: false,
     toggle: () => {},
     setHandsFree: (handsFree) => events.push(handsFree ? 'armed' : 'disarmed'),
-    silence: () => {}
+    silence: () => events.push('silence')
   })
   const chat = renderHook(
     ({ line, agentWorking, handsFree = true, hasDraft = false }: Chat) =>
@@ -103,18 +104,42 @@ it('opens the microphone once the room settles and sends what was said after the
   expect(events).toEqual(['open microphone', 'send'])
 })
 
-it('keeps no timer while the agent works or a reply is read, and opens again after them', () => {
-  const { events, rerender, wait } = listenForTurns()
+it('keeps no timer while the agent works, and listens over the reply without stopping it', () => {
+  const { events, rerender, speak, dictationIs, wait } = listenForTurns()
   rerender({ line: null, agentWorking: true })
   expect(vi.getTimerCount()).toBe(0)
   wait(60_000)
   rerender({ line: 'Pronto.', agentWorking: false })
-  expect(vi.getTimerCount()).toBe(0)
-  wait(60_000)
-  expect(events).toEqual([])
-  rerender({ line: null, agentWorking: false })
-  wait(600)
   expect(events).toEqual(['open microphone'])
+  // Marked so the microphone's dictation does not quiet the reply.
+  expect(useSpokenReplyMode.getState().overhearing).toBe('chat-1')
+  dictationIs('listening')
+  speak(true)
+  rerender({ line: 'Pronto.', agentWorking: false, hasDraft: true })
+  wait(60_000)
+  expect(events).toEqual(['open microphone'])
+  rerender({ line: null, agentWorking: false, hasDraft: true })
+  expect(useSpokenReplyMode.getState().overhearing).toBeNull()
+  speak(false)
+  wait(1400)
+  expect(events).toEqual(['open microphone', 'send'])
+})
+
+it('stops the reply for words of the person once they turn on Interrupt by speaking', () => {
+  useAppStore.setState({
+    settings: {
+      ...getDefaultSettings('/tmp'),
+      voice: { ...getDefaultVoiceSettings(), spokenReplyInterrupt: true }
+    }
+  })
+  const { events, rerender, speak, dictationIs } = listenForTurns()
+  rerender({ line: 'Pronto.', agentWorking: false })
+  dictationIs('listening')
+  // The meter hears the reply as well, so it stops nothing by itself.
+  speak(true)
+  expect(events).toEqual(['open microphone'])
+  rerender({ line: 'Pronto.', agentWorking: false, hasDraft: true })
+  expect(events).toEqual(['open microphone', 'silence'])
 })
 
 it('leaves a dictation that lands elsewhere alone, and closes a microphone nobody talks into', () => {

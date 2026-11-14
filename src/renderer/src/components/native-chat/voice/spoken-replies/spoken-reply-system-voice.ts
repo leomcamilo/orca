@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { dictationSpokenEcho } from '@/components/dictation/dictation-spoken-echo'
 import { createApiVoiceSynthesizer, spokenReplyAudio } from './spoken-reply-api-voice'
 import { showSpokenReplyApiFailure } from './spoken-reply-api-failure'
 import {
@@ -109,7 +110,10 @@ export function systemSpokenReplySpeech(): SpokenReplySpeech | null {
             system: systemSynthesizer(synthesis),
             onFailure: showSpokenReplyApiFailure
           }),
-          (line) => useSpokenReplyLine.setState({ line }),
+          (line) => {
+            useSpokenReplyLine.setState({ line })
+            dictationSpokenEcho.note(line?.text ?? null, Date.now())
+          },
           {
             afterCancel: (next) => setTimeout(next, AFTER_CANCEL_MS),
             whenReady: (speak) => whenSystemVoicesListed(synthesis, speak)

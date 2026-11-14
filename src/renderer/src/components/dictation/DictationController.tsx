@@ -15,6 +15,7 @@ import { useDictationControls } from './use-dictation-controls'
 import { useDictationQueuedSend } from './use-dictation-queued-send'
 import { createDictationTranscriptDelivery } from './dictation-transcript-delivery'
 import { createDictationStoppedSessions } from './dictation-stopped-sessions'
+import { dictationSpokenEcho } from './dictation-spoken-echo'
 import {
   showDictationDisabledToast,
   showDictationNoModelToast,
@@ -397,7 +398,10 @@ export function DictationController() {
     onLiveText: setLiveText,
     onFinal: (text) => {
       dispatch({ type: 'final-text' })
-      deliverRef.current?.(text)
+      // The microphone can be open while a reply is read; the reply heard back is not the person.
+      if (!dictationSpokenEcho.heard(text, Date.now())) {
+        deliverRef.current?.(text)
+      }
     },
     onStopped: (sessionId) => stoppedSessions.record(sessionId),
     onError: (sessionId, error) => {

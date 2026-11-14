@@ -214,12 +214,16 @@ export function useSpokenReplyJournal(journalItems: readonly AgentJournalRenderI
   const sessionId = spoken?.on ? spoken.sessionId : null
   const agentLabel = spoken?.agentLabel ?? ''
   // An open microphone would take the voice in: as dictated text, or as the person's words in a
-  // Voice mode call in any chat.
+  // Voice mode call in any chat. The one this chat opens over its own reply drops what repeats
+  // the reply, so the reply plays on.
   const dictating = useAppStore(
     (store) => store.dictationState === 'starting' || store.dictationState === 'listening'
   )
+  const overhearing = useSpokenReplyMode(
+    (state) => sessionId !== null && state.overhearing === sessionId
+  )
   const inCall = useVoiceCallPresence((state) => state.calls > 0)
-  const quiet = dictating || inCall || spoken?.visible !== true
+  const quiet = (dictating && !overhearing) || inCall || spoken?.visible !== true
   useEffect(() => {
     if (sessionId === null) {
       return
