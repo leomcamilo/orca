@@ -38,6 +38,10 @@ async function failureOf(response: Response, apiKey: string): Promise<SpeechSynt
   const raw = 'message' in detail && typeof detail.message === 'string' ? detail.message : ''
   const message = raw ? sanitizeOpenAiTranscriptionErrorMessage(raw, apiKey) : undefined
   const withMessage = message ? { message } : {}
+  // A restricted key answers 401 or 403 with this status, naming the permission it lacks.
+  if (status === 'missing_permissions') {
+    return { ok: false, failure: 'missing-permission', ...withMessage }
+  }
   if (response.status === 401) {
     return {
       ok: false,

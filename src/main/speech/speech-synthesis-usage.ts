@@ -10,7 +10,14 @@ import {
 
 export type SpeechSynthesisUsageLedger = {
   read: () => Promise<SpeechSynthesisUsage>
-  add: (provider: SpeechSynthesisProvider, characters: number) => Promise<void>
+  /** Counts the characters unless, for a paid service, they would pass `paidLimit`; false then,
+   *  with nothing counted. Checked and counted in one step, so requests sent together cannot all
+   *  pass a limit only one of them fits under. */
+  reserve: (
+    provider: SpeechSynthesisProvider,
+    characters: number,
+    paidLimit: number | null
+  ) => Promise<boolean>
 }
 
 function monthOf(date: Date): string {
@@ -50,17 +57,26 @@ export function createSpeechSynthesisUsageLedger(
   let queue: Promise<unknown> = Promise.resolve()
   const read = async (): Promise<SpeechSynthesisUsage> =>
     readUsage(await readFile(file(), 'utf8').catch(() => ''), monthOf(now()))
-  const add = (provider: SpeechSynthesisProvider, characters: number): Promise<void> => {
+  const reserve = (
+    provider: SpeechSynthesisProvider,
+    characters: number,
+    paidLimit: number | null
+  ): Promise<boolean> => {
     const next = queue.then(async () => {
       const usage = await read()
+      const paid = PAID_SPEECH_PROVIDERS.includes(provider)
+      if (paid && paidLimit !== null && paidSpeechCharacters(usage) + characters > paidLimit) {
+        return false
+      }
       usage.characters[provider] = (usage.characters[provider] ?? 0) + characters
       await mkdir(dirname(file()), { recursive: true })
       await writeFile(file(), JSON.stringify(usage))
+      return true
     })
     queue = next.catch(() => {})
     return next
   }
-  return { read: () => queue.then(read, read), add }
+  return { read: () => queue.then(read, read), reserve }
 }
 
 export const speechSynthesisUsage = createSpeechSynthesisUsageLedger(

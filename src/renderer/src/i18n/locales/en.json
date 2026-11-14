@@ -21586,7 +21586,8 @@
           "ownServer": "your voice server",
           "noServer": "No voice server is set up. Set one up in Settings > Voice.",
           "noServiceKey": "Reading replies with {{service}} needs its API key. Add it in Settings > Voice.",
-          "overLimit": "This month's limit for paid voices is reached, so nothing was sent. Raise it in Settings > Voice."
+          "overLimit": "This month's limit for paid voices is reached, so nothing was sent. Raise it in Settings > Voice.",
+          "missingPermission": "The saved {{service}} key is not allowed to read text aloud. Allow Text to Speech for it at {{service}}."
         }
       }
     },
@@ -22292,7 +22293,6 @@
           "elevenLabsKeyMissing": "No ElevenLabs API key is saved, so nothing will be read.",
           "changeKey": "Change key",
           "elevenLabsVoiceLabel": "ElevenLabs voice",
-          "elevenLabsVoicesFailed": "Could not list the voices: {{reason}}",
           "elevenLabsVoiceDescription": "From your ElevenLabs account. Multilingual voices read Brazilian Portuguese.",
           "listVoicesAgain": "List voices again",
           "chooseVoice": "Choose a voice",
@@ -22322,7 +22322,10 @@
           "elevenLabsModelOption": "{{model}} · US$ {{price}}",
           "serverUrlExample": "http://localhost:8880/v1",
           "serverModelExample": "kokoro",
-          "serverVoiceExample": "pf_dora"
+          "serverVoiceExample": "pf_dora",
+          "elevenLabsVoicesNoPermission": "The saved key is not allowed to list voices. Allow Voices (read) for it at ElevenLabs, or paste a voice ID here.",
+          "elevenLabsVoicesFailedPaste": "Could not list the voices. Paste a voice ID here, or list them again.",
+          "voiceIdPlaceholder": "Voice ID"
         }
       },
       "repositoryHooks": {

@@ -6,10 +6,12 @@ import {
   DEFAULT_ELEVENLABS_SPEECH_MODEL,
   ELEVENLABS_SPEECH_MODELS,
   isElevenLabsSpeechModel,
-  type ElevenLabsVoice
+  type ElevenLabsVoice,
+  type SpeechSynthesisFailure
 } from '../../../../../shared/speech-synthesis'
 import { useTranslate } from '@/i18n/use-translate'
 import { getIntlLocale } from '@/i18n/i18n'
+import { Input } from '../../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select'
 import { SettingsRow } from '../form-controls/SettingsFormControls'
 import { SpokenReplyServiceDialog } from './SpokenReplyServiceDialog'
@@ -36,8 +38,9 @@ export function VoiceSpokenReplyElevenLabsSettings({
   const [configured, setConfigured] = useState(false)
   const [voices, setVoices] = useState<ElevenLabsVoice[] | null>(null)
   const [listing, setListing] = useState(false)
-  const [listFailure, setListFailure] = useState<string | null>(null)
+  const [listFailure, setListFailure] = useState<SpeechSynthesisFailure | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [voiceIdDraft, setVoiceIdDraft] = useState(voiceSettings.spokenReplyElevenLabsVoice ?? '')
   const speech = window.api.speech
 
   const listVoices = useCallback(async () => {
@@ -48,7 +51,7 @@ export function VoiceSpokenReplyElevenLabsSettings({
       setVoices(listed.voices)
       setListFailure(null)
     } else {
-      setListFailure(listed?.message ?? listed?.failure ?? 'unavailable')
+      setListFailure(listed?.failure ?? 'unavailable')
     }
   }, [speech])
 
@@ -115,16 +118,20 @@ export function VoiceSpokenReplyElevenLabsSettings({
         )}
         labelId={voiceLabelId}
         description={
-          listFailure
+          listFailure === 'missing-permission'
             ? t(
-                'components.settings.voice.spokenReplies.elevenLabsVoicesFailed',
-                'Could not list the voices: {{reason}}',
-                { reason: listFailure }
+                'components.settings.voice.spokenReplies.elevenLabsVoicesNoPermission',
+                'The saved key is not allowed to list voices. Allow Voices (read) for it at ElevenLabs, or paste a voice ID here.'
               )
-            : t(
-                'components.settings.voice.spokenReplies.elevenLabsVoiceDescription',
-                'From your ElevenLabs account. Multilingual voices read Brazilian Portuguese.'
-              )
+            : listFailure
+              ? t(
+                  'components.settings.voice.spokenReplies.elevenLabsVoicesFailedPaste',
+                  'Could not list the voices. Paste a voice ID here, or list them again.'
+                )
+              : t(
+                  'components.settings.voice.spokenReplies.elevenLabsVoiceDescription',
+                  'From your ElevenLabs account. Multilingual voices read Brazilian Portuguese.'
+                )
         }
         control={
           <div className="flex items-center gap-1">
@@ -145,6 +152,25 @@ export function VoiceSpokenReplyElevenLabsSettings({
               voiceSettings={voiceSettings}
               disabled={disabled || !configured || !chosenVoice}
             />
+            {listFailure ? (
+              <Input
+                aria-labelledby={voiceLabelId}
+                className="h-8 w-48"
+                value={voiceIdDraft}
+                placeholder={t(
+                  'components.settings.voice.spokenReplies.voiceIdPlaceholder',
+                  'Voice ID'
+                )}
+                disabled={disabled}
+                onChange={(event) => setVoiceIdDraft(event.target.value)}
+                onBlur={() => {
+                  const id = voiceIdDraft.trim()
+                  if (id !== (chosenVoice ?? '')) {
+                    onUpdateVoiceSettings({ spokenReplyElevenLabsVoice: id || undefined })
+                  }
+                }}
+              />
+            ) : null}
             <Select
               value={chosenVoice ?? ''}
               disabled={disabled || voiceOptions.length === 0}

@@ -21840,7 +21840,8 @@
           "ownServer": "seu servidor de voz",
           "noServer": "Nenhum servidor de voz está configurado. Configure um em Ajustes > Voz.",
           "noServiceKey": "Ler respostas com {{service}} exige a chave de API do serviço. Adicione em Ajustes > Voz.",
-          "overLimit": "O limite deste mês para vozes pagas foi atingido, então nada foi enviado. Aumente em Ajustes > Voz."
+          "overLimit": "O limite deste mês para vozes pagas foi atingido, então nada foi enviado. Aumente em Ajustes > Voz.",
+          "missingPermission": "A chave salva de {{service}} não tem permissão para ler texto em voz alta. Libere Text to Speech para ela em {{service}}."
         }
       }
     },
@@ -22474,7 +22475,6 @@
           "elevenLabsKeyMissing": "Nenhuma chave de API da ElevenLabs está salva, então nada será lido.",
           "changeKey": "Trocar chave",
           "elevenLabsVoiceLabel": "Voz da ElevenLabs",
-          "elevenLabsVoicesFailed": "Não foi possível listar as vozes: {{reason}}",
           "elevenLabsVoiceDescription": "Da sua conta da ElevenLabs. As vozes multilíngues leem português do Brasil.",
           "listVoicesAgain": "Listar vozes de novo",
           "chooseVoice": "Escolha uma voz",
@@ -22504,7 +22504,10 @@
           "elevenLabsModelOption": "{{model}} · US$ {{price}}",
           "serverUrlExample": "http://localhost:8880/v1",
           "serverModelExample": "kokoro",
-          "serverVoiceExample": "pf_dora"
+          "serverVoiceExample": "pf_dora",
+          "elevenLabsVoicesNoPermission": "A chave salva não tem permissão para listar vozes. Libere Voices (leitura) para ela na ElevenLabs, ou cole aqui o ID de uma voz.",
+          "elevenLabsVoicesFailedPaste": "Não foi possível listar as vozes. Cole aqui o ID de uma voz, ou liste de novo.",
+          "voiceIdPlaceholder": "ID da voz"
         }
       },
       "repositoryHooks": {

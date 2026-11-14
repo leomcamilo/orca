@@ -122,6 +122,21 @@ describe('createSpokenReplySynthesis', () => {
     expect(sent).toHaveLength(1)
   })
 
+  it('lets only as many lines through as fit under the limit when a reply asks for them together', async () => {
+    const sent = answer(() => new Response(new Uint8Array([1])))
+    // Each line is 11 characters: two fit under 25, the third does not.
+    limit = 25
+    const speech = synthesis()
+    const results = await Promise.all(
+      ['a', 'b', 'c'].map((id) => speech.synthesize({ ...REQUEST, requestId: id }))
+    )
+    expect(results.filter((result) => result.ok)).toHaveLength(2)
+    expect(results.filter((result) => !result.ok && result.failure === 'over-limit')).toHaveLength(
+      1
+    )
+    expect(sent).toHaveLength(2)
+  })
+
   it('names a refused key and an empty account without repeating the key', async () => {
     answer(
       () =>

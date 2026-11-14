@@ -32,6 +32,12 @@ function failureText(
             'Reading replies with {{service}} needs its API key. Add it in Settings > Voice.',
             { service }
           )
+    case 'missing-permission':
+      return translate(
+        'components.native-chat.spokenReplies.apiFailure.missingPermission',
+        'The saved {{service}} key is not allowed to read text aloud. Allow Text to Speech for it at {{service}}.',
+        { service }
+      )
     case 'over-limit':
       return translate(
         'components.native-chat.spokenReplies.apiFailure.overLimit',

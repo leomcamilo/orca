@@ -66,6 +66,23 @@ describe('synthesizeElevenLabsSpeech', () => {
 })
 
 describe('listElevenLabsVoices', () => {
+  it('says when the key is not allowed to list voices', async () => {
+    answer(
+      () =>
+        new Response(
+          JSON.stringify({
+            detail: {
+              status: 'missing_permissions',
+              message:
+                'The API key you used is missing the permission voices_read to execute this operation.'
+            }
+          }),
+          { status: 401 }
+        )
+    )
+    expect(await listElevenLabsVoices()).toMatchObject({ ok: false, failure: 'missing-permission' })
+  })
+
   it('lists the account voices by name', async () => {
     answer(
       () =>

@@ -10,7 +10,7 @@ import {
 } from '../../shared/speech-synthesis'
 import { synthesizeElevenLabsSpeech } from './elevenlabs-speech'
 import { synthesizeOpenAiCompatibleSpeech, synthesizeOpenAiSpeech } from './openai-speech-synthesis'
-import { paidSpeechCharacters, type SpeechSynthesisUsageLedger } from './speech-synthesis-usage'
+import type { SpeechSynthesisUsageLedger } from './speech-synthesis-usage'
 
 const SPEECH_TIMEOUT_MS = 30_000
 // About five minutes of 24 kHz mono WAV; a spoken line is seconds long.
@@ -88,21 +88,19 @@ export function createSpokenReplySynthesis(deps: {
     if (!valid) {
       return { ok: false, failure: 'refused', message: 'Invalid speech request' }
     }
-    const paid = PAID_SPEECH_PROVIDERS.includes(valid.provider)
-    const limit = deps.monthlyLimit()
-    if (paid && limit !== null) {
-      const used = paidSpeechCharacters(await deps.usage.read())
-      if (used + valid.text.length > limit) {
-        return { ok: false, failure: 'over-limit' }
-      }
+    // Counted when sent: a request cut short may still be billed.
+    const reserved = await deps.usage
+      .reserve(valid.provider, valid.text.length, deps.monthlyLimit())
+      // A usage file that cannot be written must not leave a paid service unlimited.
+      .catch(() => !PAID_SPEECH_PROVIDERS.includes(valid.provider))
+    if (!reserved) {
+      return { ok: false, failure: 'over-limit' }
     }
     const cancel = new AbortController()
     pending.get(valid.requestId)?.abort()
     pending.set(valid.requestId, cancel)
     const timeout = AbortSignal.timeout(SPEECH_TIMEOUT_MS)
     try {
-      // Counted when sent: a request cut short may still be billed.
-      await deps.usage.add(valid.provider, valid.text.length).catch(() => {})
       const result = await synthesizeWith(
         valid,
         AbortSignal.any([cancel.signal, timeout, ...(callerGone ? [callerGone] : [])])
