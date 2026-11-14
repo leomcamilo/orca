@@ -137,6 +137,27 @@ describe('createSpokenReplySynthesis', () => {
     expect(sent).toHaveLength(2)
   })
 
+  it('refuses a paid line when its usage cannot be recorded, and says so', async () => {
+    const sent = answer(() => new Response(new Uint8Array([1])))
+    const speech = createSpokenReplySynthesis({
+      usage: {
+        read: async () => ({ month: '2026-11', characters: {} }),
+        reserve: async () => {
+          throw new Error('disk full')
+        }
+      },
+      monthlyLimit: () => 20_000
+    })
+    expect(await speech.synthesize(REQUEST)).toMatchObject({
+      ok: false,
+      failure: 'refused',
+      message: 'The usage count could not be saved, so nothing was sent'
+    })
+    expect(sent).toHaveLength(0)
+    await speech.synthesize({ ...REQUEST, provider: 'openai-compatible', voice: '' })
+    expect(sent).toHaveLength(1)
+  })
+
   it('names a refused key and an empty account without repeating the key', async () => {
     answer(
       () =>

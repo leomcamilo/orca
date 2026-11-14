@@ -1,5 +1,6 @@
 import { createEncryptedApiKeyFileStore } from '../credentials/encrypted-api-key-file-store'
 import { getMainHttpClient } from '../network/http-client'
+import { readSpeechAudio } from './speech-audio-response'
 import { sanitizeOpenAiTranscriptionErrorMessage } from './openai-transcription-client'
 import type { ElevenLabsVoiceListing, SpeechSynthesisResult } from '../../shared/speech-synthesis'
 
@@ -31,7 +32,9 @@ function readKey(): string | null {
   }
 }
 
-async function failureOf(response: Response, apiKey: string): Promise<SpeechSynthesisResult> {
+type SpeechFailure = Extract<SpeechSynthesisResult, { ok: false }>
+
+async function failureOf(response: Response, apiKey: string): Promise<SpeechFailure> {
   const data: { detail?: unknown } = await response.json().catch(() => ({}))
   const detail = typeof data.detail === 'object' && data.detail !== null ? data.detail : {}
   const status = 'status' in detail && typeof detail.status === 'string' ? detail.status : ''
@@ -87,7 +90,10 @@ export async function synthesizeElevenLabsSpeech(
   if (!response.ok) {
     return failureOf(response, apiKey)
   }
-  return { ok: true, audio: new Uint8Array(await response.arrayBuffer()) }
+  const audio = await readSpeechAudio(response)
+  return audio
+    ? { ok: true, audio }
+    : { ok: false, failure: 'refused', message: 'The speech audio was too large' }
 }
 
 /** The voices this ElevenLabs account can use, by name. */
@@ -103,8 +109,7 @@ export async function listElevenLabsVoices(): Promise<ElevenLabsVoiceListing> {
       headers: { 'xi-api-key': apiKey }
     })
     if (!response.ok) {
-      const failed = await failureOf(response, apiKey)
-      return failed.ok ? { ok: false, failure: 'refused' } : failed
+      return await failureOf(response, apiKey)
     }
     const data: { voices?: unknown } = await response.json()
     const voices = Array.isArray(data.voices) ? data.voices : []

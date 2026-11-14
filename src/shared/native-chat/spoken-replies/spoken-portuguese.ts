@@ -118,6 +118,31 @@ export function numberInWords(value: number): string {
     .join(' ')
 }
 
+/** Hours are feminine: "uma hora", "vinte e duas horas". */
+function hoursInWords(hours: number): string {
+  const words = numberInWords(hours)
+    .replace(/\bum$/, 'uma')
+    .replace(/\bdois$/, 'duas')
+  return words
+}
+
+function hoursUnit(hours: number): string {
+  return hours === 1 ? 'hora' : 'horas'
+}
+
+/** A phone number or postal code, read digit by digit in its groups. */
+function digitsInWords(groups: string): string {
+  return groups
+    .split('-')
+    .map((group) =>
+      group
+        .split('')
+        .map((digit) => UNITS[Number(digit)])
+        .join(' ')
+    )
+    .join(', ')
+}
+
 const ORDINALS = [
   '',
   'primeir',
@@ -159,7 +184,8 @@ const WORD_ACRONYMS = new Set([
   'UERJ',
   'USP',
   'COPPEAD',
-  'FIFA'
+  'FIFA',
+  'CEP'
 ])
 
 function spelled(acronym: string): string {
@@ -207,14 +233,16 @@ export function spokenPortuguese(text: string, options: SpokenPortugueseOptions)
       Number(hour) > 23 || Number(minute) > 59
         ? match
         : Number(minute) === 0
-          ? `${numberInWords(Number(hour))} horas`
-          : `${numberInWords(Number(hour))} e ${numberInWords(Number(minute))}`
+          ? `${hoursInWords(Number(hour))} ${hoursUnit(Number(hour))}`
+          : `${hoursInWords(Number(hour))} e ${numberInWords(Number(minute))}`
     )
     .replace(/\b(\d{1,2})h(\d{2})?\b/g, (match, hour: string, minute?: string) =>
       Number(hour) > 23
         ? match
-        : `${numberInWords(Number(hour))} horas${minute && Number(minute) > 0 ? ` e ${numberInWords(Number(minute))}` : ''}`
+        : `${hoursInWords(Number(hour))} ${hoursUnit(Number(hour))}${minute && Number(minute) > 0 ? ` e ${numberInWords(Number(minute))}` : ''}`
     )
+    // 99876-5432, 24210-346: a phone number or postal code.
+    .replace(/\b(?:\d{4,5}-\d{4}|\d{5}-\d{3})\b/g, digitsInWords)
     // 1.4.258-leo.6: a version, read part by part.
     .replace(
       /\b(\d+(?:\.\d+){2,})(-[A-Za-z]+(?:\.\d+)?)?/g,

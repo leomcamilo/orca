@@ -1,4 +1,5 @@
 import { getMainHttpClient } from '../network/http-client'
+import { readSpeechAudio } from './speech-audio-response'
 import { hasOpenAiSpeechApiKey, readOpenAiSpeechApiKey } from './openai-api-key-store'
 import {
   readOpenAiErrorMessage,
@@ -57,7 +58,10 @@ async function postSpeech(
   if (!response.ok) {
     return failureOf(response, apiKey)
   }
-  return { ok: true, audio: new Uint8Array(await response.arrayBuffer()) }
+  const audio = await readSpeechAudio(response)
+  return audio
+    ? { ok: true, audio }
+    : { ok: false, failure: 'refused', message: 'The speech audio was too large' }
 }
 
 /** One line from OpenAI's speech API, with the key saved for dictation. */

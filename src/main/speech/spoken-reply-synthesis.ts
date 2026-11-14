@@ -13,8 +13,6 @@ import { synthesizeOpenAiCompatibleSpeech, synthesizeOpenAiSpeech } from './open
 import type { SpeechSynthesisUsageLedger } from './speech-synthesis-usage'
 
 const SPEECH_TIMEOUT_MS = 30_000
-// About five minutes of 24 kHz mono WAV; a spoken line is seconds long.
-const MAX_AUDIO_BYTES = 16 * 1024 * 1024
 const MAX_REQUEST_ID_LENGTH = 64
 const MAX_VOICE_LENGTH = 64
 
@@ -92,7 +90,14 @@ export function createSpokenReplySynthesis(deps: {
     const reserved = await deps.usage
       .reserve(valid.provider, valid.text.length, deps.monthlyLimit())
       // A usage file that cannot be written must not leave a paid service unlimited.
-      .catch(() => !PAID_SPEECH_PROVIDERS.includes(valid.provider))
+      .catch(() => (PAID_SPEECH_PROVIDERS.includes(valid.provider) ? 'unrecorded' : true))
+    if (reserved === 'unrecorded') {
+      return {
+        ok: false,
+        failure: 'refused',
+        message: 'The usage count could not be saved, so nothing was sent'
+      }
+    }
     if (!reserved) {
       return { ok: false, failure: 'over-limit' }
     }
@@ -105,9 +110,6 @@ export function createSpokenReplySynthesis(deps: {
         valid,
         AbortSignal.any([cancel.signal, timeout, ...(callerGone ? [callerGone] : [])])
       )
-      if (result.ok && result.audio.byteLength > MAX_AUDIO_BYTES) {
-        return { ok: false, failure: 'refused', message: 'The speech audio was too large' }
-      }
       return result
     } catch {
       if (cancel.signal.aborted || callerGone?.aborted) {

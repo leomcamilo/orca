@@ -40,6 +40,15 @@ describe('spokenPortuguese', () => {
     )
   })
 
+  it('reads hours in the feminine and phone numbers and postal codes digit by digit', () => {
+    expect(spokenPortuguese('Às 01:30, depois 1h e 21h.', { respellEnglish: false })).toBe(
+      'Às uma e trinta, depois uma hora e vinte e uma horas.'
+    )
+    expect(spokenPortuguese('Ligue 99876-5432, CEP 24210-346.', { respellEnglish: false })).toBe(
+      'Ligue nove nove oito sete seis, cinco quatro três dois, cep dois quatro dois um zero, três quatro seis.'
+    )
+  })
+
   it('respells common English terms only for a voice that reads them with Portuguese rules', () => {
     expect(spokenPortuguese('O build passou no gate.', { respellEnglish: true })).toBe(
       'O bíld passou no gueit.'
