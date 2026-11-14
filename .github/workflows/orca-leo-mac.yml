@@ -1,0 +1,155 @@
+# Orca Leo, Leo's personal build of Orca. Runs only for an orca-leo-* tag pushed to leomcamilo/orca,
+# never per commit. No secrets: ad-hoc signed, not notarized, never published as a release.
+# orca-leo-v<version> verifies and builds; orca-leo-check-<label> only verifies.
+name: Orca Leo mac build
+
+on:
+  push:
+    tags: ['orca-leo-v*', 'orca-leo-check-*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orca-leo-mac-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: changed-code gate against upstream main
+    if: github.repository == 'leomcamilo/orca'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # The gate diffs against the merge-base with upstream main, so it needs the history.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: ./.github/actions/install-node-dependencies
+        with:
+          native-runtime: node
+          node-version: '24'
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            mobile/pnpm-lock.yaml
+
+      - name: Set up Bun for the gate
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: config/.bun-version
+          no-cache: true
+
+      - uses: ./.github/actions/install-mobile-dependencies
+
+      - name: Run the changed-code gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags https://github.com/stablyai/orca.git main
+          base="$(git merge-base FETCH_HEAD HEAD)"
+          echo "upstream base $base, head $(git rev-parse HEAD)"
+          node config/scripts/preflight/changed-checks/check-changed.mjs --base="$base" --force --maxWorkers=3
+
+  build:
+    name: package Orca Leo (arm64, ad-hoc)
+    needs: [verify]
+    if: github.repository == 'leomcamilo/orca' && startsWith(github.ref_name, 'orca-leo-v')
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      ORCA_BACKGROUND_LAUNCH: '1'
+      NODE_OPTIONS: --max-old-space-size=4096
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Version from tag
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#orca-leo-v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-leo\.[0-9]+$ ]]; then
+            echo "::error::Tag $TAG must look like orca-leo-v1.4.258-leo.2"
+            exit 1
+          fi
+          echo "ORCA_LEO_VERSION=$version" >>"$GITHUB_ENV"
+
+      - name: Setup pnpm
+        uses: pnpm/setup@e62bed3a93faa9b07baad0c8f76b8391b86a3f89 # v2
+        with:
+          install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          check-latest: true
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: ./.github/actions/install-mobile-dependencies
+
+      - name: Build app and macOS helpers
+        run: |
+          pnpm run build:desktop
+          pnpm run build:computer-macos
+          pnpm run build:keyboard-layout-macos
+          pnpm run build:process-footprint-macos
+          pnpm run build:notification-status-macos
+          pnpm run ensure:electron-runtime
+
+      - name: Package (arm64, ad-hoc)
+        run: >-
+          pnpm exec electron-builder --config config/orca-leo/electron-builder.orca-leo.cjs
+          --mac zip --arm64 --publish never
+
+      - name: Name the bundle, verify identity, zip and record hash
+        shell: bash
+        run: |
+          set -euo pipefail
+          built="$(find dist -maxdepth 3 -name 'Orca.app' -type d | head -1)"
+          app="$(dirname "$built")/Orca Leo.app"
+          # The folder name is outside the signature, so the rename keeps it valid.
+          mv "$built" "$app"
+          plist="$app/Contents/Info.plist"
+          read_plist() { /usr/libexec/PlistBuddy -c "Print :$1" "$plist"; }
+          # Orca's identity, so it replaces the official app in place on the official profile.
+          test "$(read_plist CFBundleIdentifier)" = com.stablyai.orca
+          test "$(read_plist CFBundleName)" = Orca
+          test "$(read_plist CFBundleExecutable)" = Orca
+          test -d "$app/Contents/Frameworks/Orca Helper.app"
+          read_plist CFBundleURLTypes:0:CFBundleURLSchemes | grep -qx '    orca'
+          # The name people see.
+          test "$(read_plist CFBundleDisplayName)" = 'Orca Leo'
+          for localization in en pt_BR; do
+            grep -qx 'CFBundleName = "Orca Leo";' \
+              "$app/Contents/Resources/$localization.lproj/InfoPlist.strings"
+          done
+          test "$(read_plist CFBundleShortVersionString)" = "$ORCA_LEO_VERSION"
+          helper="$app/Contents/Resources/Orca Computer Use.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$helper"
+          codesign --verify --deep --strict "$app"
+          codesign -dv "$app" 2>&1 | grep -E 'Identifier|Signature'
+          # electron-builder's zip holds Orca.app; ship the renamed bundle instead.
+          rm -f dist/*.zip dist/*.blockmap
+          zip="dist/Orca-Leo-$ORCA_LEO_VERSION-arm64.zip"
+          ditto -c -k --keepParent "$app" "$zip"
+          shasum -a 256 "$zip" | tee dist/orca-leo-sha256.txt
+          echo "commit $GITHUB_SHA" >>dist/orca-leo-sha256.txt
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: orca-leo-${{ env.ORCA_LEO_VERSION }}-mac-arm64
+          path: |
+            dist/*.zip
+            dist/orca-leo-sha256.txt
+          retention-days: 3
+          if-no-files-found: error
