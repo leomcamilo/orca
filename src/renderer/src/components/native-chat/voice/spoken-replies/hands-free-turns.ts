@@ -151,7 +151,13 @@ export class HandsFreeTurns {
         return null
       }
       // The person is mid-word: their turn has begun.
-      this.phase = { name: 'listening', since: now, lastSpeechAt: now, speaking: true, wrote: false }
+      this.phase = {
+        name: 'listening',
+        since: now,
+        lastSpeechAt: now,
+        speaking: true,
+        wrote: false
+      }
       return 'interrupt-voice'
     }
     if (phase.name === 'opening') {
