@@ -70,7 +70,8 @@ Os builds anteriores usavam os nomes `leo-voice` e `Orca Voice`. As tags `leo-vo
    `X.Y.Z` igual à versão do Orca oficial instalada.
 3. O workflow roda o `check:changed` do repositório contra a base do Orca oficial. Só depois
    empacota para Mac com Apple Silicon. A saída da verificação fica guardada como artefato
-   `orca-leo-gate-<tag>`.
+   `orca-leo-gate-<tag>`. Ela traz o fim de cada etapa que falhou; ao lado de cada teste com falha
+   aparece `[k/N]`, e `N` é o total.
 4. O resultado é um zip com `Orca Leo.app`, com assinatura ad-hoc e sem notarização, e o hash
    SHA-256 ao lado.
 
