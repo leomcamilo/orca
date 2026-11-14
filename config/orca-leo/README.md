@@ -19,7 +19,7 @@ O código próprio do Orca Leo é pequeno e fica em três lugares:
 | Caminho                                         | O que faz                            |
 | ----------------------------------------------- | ------------------------------------ |
 | `config/orca-leo/electron-builder.orca-leo.cjs` | Configuração do pacote               |
-| `src/main/orca-leo/orca-leo-distribution.ts`    | Nome exibido e atualizador desligado |
+| `src/shared/orca-leo/orca-leo-distribution.ts`  | Nome exibido e atualizador desligado |
 | `.github/workflows/orca-leo-mac.yml`            | Verificação e build                  |
 
 Nada disso entra em PR para o Orca oficial.
@@ -34,7 +34,9 @@ Aparece como "Orca Leo":
 - a pasta do app, `Orca Leo.app`;
 - o nome no Finder, no Dock, no alternador de apps, na barra de menus e nas listas de Privacidade e
   Segurança;
-- o painel "Sobre";
+- os itens "Sobre", "Ocultar" e "Encerrar" do menu do app e o painel "Sobre";
+- o título da janela, o nome na barra de título e a linha do app no uso de recursos;
+- o texto dos pedidos de permissão do macOS;
 - a versão, no formato `1.4.258-leo.2`;
 - o workflow, as tags `orca-leo-v*` e o arquivo do build, `Orca-Leo-<versão>-arm64.zip`.
 
@@ -49,6 +51,15 @@ Continua com o nome do Orca, por compatibilidade:
 | Protocolo e CLI                         | `orca://`, `orca`                    | Usados por links, terminais e agentes                                                |
 | Textos da interface                     | "Orca"                               | São os textos do Orca oficial; trocá-los geraria conflito a cada atualização da base |
 | Repositório                             | `leomcamilo/orca`                    | É a origem do PR #41705                                                              |
+
+Ainda aparece como "Orca", sem ser por compatibilidade:
+
+- a dica da bandeja na barra de menus e o aviso único "Orca is still running in the system tray".
+  Trocar exige alterar testes do Orca oficial que fixam esse texto;
+- a tela de boas-vindas e o diálogo de relatório de falha, que aparecem raramente;
+- as frases da interface. São 1.370 textos em 11 idiomas e não dá para trocar em bloco: muitos falam
+  do produto e do serviço oficiais ("Needs Orca 1.4 or later", "Orca is open source", Orca Cloud,
+  Orca Mobile), e a troca os deixaria errados.
 
 Os builds anteriores usavam os nomes `leo-voice` e `Orca Voice`. As tags `leo-voice-v*` e as branches
 `leo/voice-*` ficam no fork como histórico.
