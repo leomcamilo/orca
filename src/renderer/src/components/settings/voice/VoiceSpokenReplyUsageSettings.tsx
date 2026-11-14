@@ -7,8 +7,7 @@ import {
   OPENAI_SPEECH_USD_PER_THOUSAND_CHARACTERS_ESTIMATE,
   type SpeechSynthesisUsage
 } from '../../../../../shared/speech-synthesis'
-import { useTranslate } from '@/i18n/use-translate'
-import { getIntlLocale } from '@/i18n/i18n'
+import { useIntlLocale, useTranslate } from '@/i18n/use-translate'
 import { Input } from '../../ui/input'
 import { SettingsRow } from '../form-controls/SettingsFormControls'
 
@@ -39,6 +38,7 @@ export function VoiceSpokenReplyUsageSettings({
   onUpdateVoiceSettings: (updates: Partial<VoiceSettings>) => void
 }): React.JSX.Element {
   const t = useTranslate()
+  const locale = useIntlLocale()
   const limitId = useId()
   const [usage, setUsage] = useState<SpeechSynthesisUsage | null>(null)
   const saved = voiceSettings.spokenReplyMonthlyCharacterLimit
@@ -79,8 +79,8 @@ export function VoiceSpokenReplyUsageSettings({
         'components.settings.voice.spokenReplies.usageDescription',
         'Read this month on this computer: {{used}} characters, about US$ {{usd}}. At the limit replies stop being read, with a notice, before anything is sent. Empty means no limit.',
         {
-          used: used.toLocaleString(getIntlLocale()),
-          usd: usd.toLocaleString(getIntlLocale(), {
+          used: used.toLocaleString(locale),
+          usd: usd.toLocaleString(locale, {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
           })

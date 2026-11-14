@@ -23,6 +23,18 @@ export type SpokenReplyServiceField = {
   optional?: boolean
 }
 
+/** What went wrong saving or removing, in the main process's own words; null when it worked. */
+async function failureOf(action: () => Promise<void>): Promise<string | null> {
+  try {
+    await action()
+    return null
+  } catch (failure) {
+    const message = failure instanceof Error ? failure.message : String(failure)
+    // IPC wraps the main process's own words in its channel name.
+    return message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '')
+  }
+}
+
 /** Saves what reaching a speech service takes: a key, or a server's address and names. What it
  *  saves is sealed in the main process; the dialog never reads a saved secret back. */
 export function SpokenReplyServiceDialog({
@@ -54,16 +66,13 @@ export function SpokenReplyServiceDialog({
   const run = async (action: () => Promise<void>): Promise<void> => {
     setPending(true)
     setError(null)
-    try {
-      await action()
+    const failure = await failureOf(action)
+    setPending(false)
+    if (failure === null) {
       setValues({})
       onOpenChange(false)
-    } catch (failure) {
-      const message = failure instanceof Error ? failure.message : String(failure)
-      // IPC wraps the main process's own words in its channel name.
-      setError(message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, ''))
-    } finally {
-      setPending(false)
+    } else {
+      setError(failure)
     }
   }
   const save = (): Promise<void> =>

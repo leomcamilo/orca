@@ -9,8 +9,7 @@ import {
   type ElevenLabsVoice,
   type SpeechSynthesisFailure
 } from '../../../../../shared/speech-synthesis'
-import { useTranslate } from '@/i18n/use-translate'
-import { getIntlLocale } from '@/i18n/i18n'
+import { useIntlLocale, useTranslate } from '@/i18n/use-translate'
 import { Input } from '../../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select'
 import { SettingsRow } from '../form-controls/SettingsFormControls'
@@ -33,6 +32,7 @@ export function VoiceSpokenReplyElevenLabsSettings({
   onUpdateVoiceSettings: (updates: Partial<VoiceSettings>) => void
 }): React.JSX.Element {
   const t = useTranslate()
+  const locale = useIntlLocale()
   const voiceLabelId = useId()
   const modelLabelId = useId()
   const [configured, setConfigured] = useState(false)
@@ -222,7 +222,7 @@ export function VoiceSpokenReplyElevenLabsSettings({
                     '{{model}} · US$ {{price}}',
                     {
                       model: MODEL_LABELS[option.id],
-                      price: option.usdPerThousandCharacters.toLocaleString(getIntlLocale(), {
+                      price: option.usdPerThousandCharacters.toLocaleString(locale, {
                         minimumFractionDigits: 2
                       })
                     }
