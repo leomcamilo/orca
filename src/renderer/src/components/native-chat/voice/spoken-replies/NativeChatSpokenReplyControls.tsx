@@ -1,7 +1,5 @@
-import {
-  NativeChatHandsFreeButton,
-  type NativeChatHandsFreeComposer
-} from './NativeChatHandsFreeButton'
+import { NativeChatHandsFreeButton } from './NativeChatHandsFreeButton'
+import type { NativeChatHandsFreeComposer } from './use-hands-free-turns'
 import { NativeChatSpokenReplyButton } from './NativeChatSpokenReplyButton'
 import type { NativeChatSpokenReplies } from './use-native-chat-spoken-replies'
 

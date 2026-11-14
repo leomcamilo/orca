@@ -23,6 +23,11 @@ export function useDictationMeter(): DictationMeterState {
   return useStore(dictationMeterStore, (state) => state)
 }
 
+/** Whether the microphone hears a voice, without the level that moves many times a second. */
+export function useDictationSpeaking(): boolean {
+  return useStore(dictationMeterStore, (state) => state.isSpeaking)
+}
+
 if (e2eConfig.exposeStore && typeof window !== 'undefined') {
   const testWindow = window as unknown as Record<string, unknown>
   testWindow.__dictationMeterE2E = { publish: publishDictationMeter }

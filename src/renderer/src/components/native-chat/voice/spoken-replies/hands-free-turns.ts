@@ -36,7 +36,7 @@ const SENT_WITHOUT_WORK_MS = 4000
 type Phase =
   | { name: 'resting'; readySince: number | null }
   | { name: 'opening'; since: number }
-  | { name: 'listening'; since: number; lastSpeechAt: number | null }
+  | { name: 'listening'; since: number; lastSpeechAt: number | null; speaking: boolean }
   | { name: 'sent'; since: number; sawWork: boolean }
 
 const RESTING: Phase = { name: 'resting', readySince: null }
@@ -50,9 +50,34 @@ export class HandsFreeTurns {
   private failedOpens = 0
   // Noise passes for speech at the meter, but sends nothing; it must not keep the microphone open.
   private unheardSends = 0
+  private lookedAt = 0
+
+  /** When to look again though no fact has changed: the end of a settle, a pause or a wait. Null
+   *  while only a change can move the turn, so nothing ticks while it rests. */
+  deadline(): number | null {
+    const phase = this.phase
+    const at =
+      phase.name === 'resting'
+        ? phase.readySince === null
+          ? null
+          : phase.readySince + HANDS_FREE_SETTLE_MS
+        : phase.name === 'opening'
+          ? phase.since + OPEN_TIMEOUT_MS
+          : phase.name === 'listening'
+            ? phase.speaking
+              ? null
+              : phase.lastSpeechAt === null
+                ? phase.since + HANDS_FREE_NO_SPEECH_MS
+                : phase.lastSpeechAt + HANDS_FREE_END_OF_SPEECH_MS
+            : phase.sawWork
+              ? null
+              : phase.since + SENT_WITHOUT_WORK_MS
+    return at !== null && at > this.lookedAt ? at : null
+  }
 
   next(facts: HandsFreeFacts): HandsFreeAction {
     const { now } = facts
+    this.lookedAt = now
     if (facts.dictation === 'error') {
       return 'give-up'
     }
@@ -76,7 +101,7 @@ export class HandsFreeTurns {
         // A dictation that lands elsewhere started in the same moment; it is not this chat's.
         this.failedOpens = 0
         this.phase = facts.ownsDictation
-          ? { name: 'listening', since: now, lastSpeechAt: null }
+          ? { name: 'listening', since: now, lastSpeechAt: null, speaking: false }
           : { ...RESTING }
       } else if (facts.dictation === 'idle' && now - phase.since >= OPEN_TIMEOUT_MS) {
         // A microphone that will not open (no model, no permission) is not asked forever.
@@ -94,8 +119,12 @@ export class HandsFreeTurns {
       if (facts.dictation !== 'listening') {
         return null
       }
-      if (facts.userSpeaking) {
+      // The facts arrive as changes, not as a stream: speech lasts from its start to its end.
+      if (facts.userSpeaking || phase.speaking) {
         phase.lastSpeechAt = now
+      }
+      phase.speaking = facts.userSpeaking
+      if (facts.userSpeaking) {
         return null
       }
       if (phase.lastSpeechAt === null) {

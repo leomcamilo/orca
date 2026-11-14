@@ -34,11 +34,8 @@ const LUCIANA: FakeVoice = {
 }
 
 // One system voice for the file: the speech queue keeps the first synthesizer it is given.
-const system = {
-  voices: [LUCIANA] as FakeVoice[],
-  spoken: [] as FakeUtterance[],
-  voicesListed: null as (() => void) | null
-}
+const system: { voices: FakeVoice[]; spoken: FakeUtterance[]; voicesListed: (() => void) | null } =
+  { voices: [LUCIANA], spoken: [], voicesListed: null }
 vi.stubGlobal('SpeechSynthesisUtterance', function SpeechSynthesisUtterance(text: string) {
   return { text, voice: null, lang: '', onend: null, onerror: null }
 })
