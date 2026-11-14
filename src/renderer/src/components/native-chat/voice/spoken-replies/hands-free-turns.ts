@@ -11,6 +11,8 @@ export type HandsFreeFacts = {
   voiceSpeaking: boolean
   /** The composer would take a send. */
   canSend: boolean
+  /** The composer holds words, dictated or typed. */
+  hasDraft: boolean
   now: number
 }
 
@@ -39,8 +41,14 @@ type Phase =
   | { name: 'listening'; since: number; lastSpeechAt: number | null; speaking: boolean }
   | { name: 'sent'; since: number; sawWork: boolean }
 
-function ready(facts: HandsFreeFacts): boolean {
+function quiet(facts: HandsFreeFacts): boolean {
   return facts.dictation === 'idle' && !facts.agentWorking && !facts.voiceSpeaking && facts.canSend
+}
+
+// A draft already there would go out with whatever the microphone hears next, noise included, so
+// the microphone opens on an empty composer only.
+function ready(facts: HandsFreeFacts): boolean {
+  return quiet(facts) && !facts.hasDraft
 }
 
 /** Takes turns with the agent by voice: opens the microphone once the agent has finished and its
@@ -53,6 +61,7 @@ export class HandsFreeTurns {
   // Noise passes for speech at the meter, but sends nothing; it must not keep the microphone open.
   private unheardSends = 0
   private lookedAt = 0
+  private draftInTheWay = false
 
   /** When to look again though no fact has changed: the end of a settle, a pause or a wait. Null
    *  while only a change can move the turn, so nothing ticks while it rests. */
@@ -77,7 +86,23 @@ export class HandsFreeTurns {
     return at !== null && at > this.lookedAt ? at : null
   }
 
+  /** The microphone is open, or opening, because this turn asked for it. */
+  holdsMicrophone(): boolean {
+    return this.phase.name === 'opening' || this.phase.name === 'listening'
+  }
+
+  /** Only the draft in the composer keeps the microphone from opening. */
+  waitsForEmptyComposer(): boolean {
+    return this.draftInTheWay
+  }
+
   next(facts: HandsFreeFacts): HandsFreeAction {
+    const action = this.move(facts)
+    this.draftInTheWay = this.phase.name === 'resting' && quiet(facts) && facts.hasDraft
+    return action
+  }
+
+  private move(facts: HandsFreeFacts): HandsFreeAction {
     const { now } = facts
     this.lookedAt = now
     if (facts.dictation === 'error') {
@@ -130,7 +155,11 @@ export class HandsFreeTurns {
         return null
       }
       if (phase.lastSpeechAt === null) {
-        return now - phase.since >= HANDS_FREE_NO_SPEECH_MS ? 'close-unused' : null
+        if (now - phase.since < HANDS_FREE_NO_SPEECH_MS) {
+          return null
+        }
+        this.phase = { name: 'resting', readySince: null }
+        return 'close-unused'
       }
       if (now - phase.lastSpeechAt < HANDS_FREE_END_OF_SPEECH_MS) {
         return null

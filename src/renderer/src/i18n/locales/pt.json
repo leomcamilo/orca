@@ -21800,7 +21800,9 @@
         "handsFreeUnheard": "Parei de escutar: o microfone captou som, mas nenhuma palavra, duas vezes",
         "handsFreeOn": "Escutando a sua vez",
         "handsFreeDisclosure": "O que o microfone ouvir é enviado ao {{agent}} a cada pausa.",
-        "handsFreeStopShort": "Parar de escutar"
+        "handsFreeStopShort": "Parar de escutar",
+        "handsFreeWaiting": "Sem escutar enquanto houver rascunho",
+        "handsFreeWaitingDetail": "Envie ou apague o rascunho e o microfone volta a abrir."
       }
     },
     "tab": {

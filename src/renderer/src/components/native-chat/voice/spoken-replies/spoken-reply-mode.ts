@@ -6,10 +6,12 @@ type ChatSet = Readonly<Record<string, true>>
 
 /** The chats reading their replies aloud, and those among them also listening for the person's
  *  turn. Kept in memory: a restart starts every chat silent, with its microphone closed. */
-export const useSpokenReplyMode = create<{ on: ChatSet; handsFree: ChatSet }>(() => ({
-  on: {},
-  handsFree: {}
-}))
+export const useSpokenReplyMode = create<{
+  on: ChatSet
+  handsFree: ChatSet
+  /** The listening chat whose microphone stays closed until its composer is empty. */
+  waitsForEmptyComposer: string | null
+}>(() => ({ on: {}, handsFree: {}, waitsForEmptyComposer: null }))
 
 function withChat(chats: ChatSet, sessionId: string, member: boolean): ChatSet {
   const { [sessionId]: _was, ...others } = chats
@@ -43,5 +45,15 @@ export function spokenReplyRequestedFor(sessionId: string): boolean {
   return (
     useSpokenReplyMode.getState().on[sessionId] === true &&
     useAppStore.getState().settings?.voice?.spokenReplies === true
+  )
+}
+
+export function setWaitsForEmptyComposer(sessionId: string, waits: boolean): void {
+  useSpokenReplyMode.setState((state) =>
+    waits
+      ? { waitsForEmptyComposer: sessionId }
+      : state.waitsForEmptyComposer === sessionId
+        ? { waitsForEmptyComposer: null }
+        : state
   )
 }

@@ -34,6 +34,8 @@ export type NativeChatSpokenReplies = {
   agentLabel: string
   /** The chat also opens the microphone for the person's turn and sends what they say. */
   handsFree: boolean
+  /** Listening is on, but the microphone stays closed until the composer is empty. */
+  waitsForEmptyComposer: boolean
   toggle: () => void
   setHandsFree: (handsFree: boolean) => void
   /** Stops the voice; the agent's work is untouched. */
@@ -100,6 +102,8 @@ export function useNativeChatSpokenReplies(args: {
   const offered = spokenRepliesOffered(agent, enabled) && systemSpokenReplySpeech() !== null
   const on = useSpokenReplyMode((state) => state.on[sessionId] === true) && offered
   const handsFree = useSpokenReplyMode((state) => state.handsFree[sessionId] === true) && on
+  const waitsForEmptyComposer =
+    useSpokenReplyMode((state) => state.waitsForEmptyComposer === sessionId) && handsFree
   const line = useSpokenReplyLine((state) =>
     state.line?.owner === sessionId ? state.line.text : null
   )
@@ -138,11 +142,23 @@ export function useNativeChatSpokenReplies(args: {
       line,
       agentLabel,
       handsFree,
+      waitsForEmptyComposer,
       toggle,
       setHandsFree,
       silence
     }),
-    [on, sessionId, isVisible, line, agentLabel, handsFree, toggle, setHandsFree, silence]
+    [
+      on,
+      sessionId,
+      isVisible,
+      line,
+      agentLabel,
+      handsFree,
+      waitsForEmptyComposer,
+      toggle,
+      setHandsFree,
+      silence
+    ]
   )
   return offered ? control : null
 }

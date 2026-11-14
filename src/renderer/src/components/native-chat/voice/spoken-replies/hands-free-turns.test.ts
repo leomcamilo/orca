@@ -7,7 +7,8 @@ const quiet: Omit<HandsFreeFacts, 'now'> = {
   userSpeaking: false,
   agentWorking: false,
   voiceSpeaking: false,
-  canSend: true
+  canSend: true,
+  hasDraft: false
 }
 const mine: Omit<HandsFreeFacts, 'now'> = { ...quiet, dictation: 'listening', ownsDictation: true }
 const elsewhere: Omit<HandsFreeFacts, 'now'> = { ...quiet, dictation: 'listening' }
