@@ -132,6 +132,9 @@ jobs:
             grep -qx 'CFBundleName = "Orca Leo";' \
               "$app/Contents/Resources/$localization.lproj/InfoPlist.strings"
           done
+          read_plist NSDocumentsFolderUsageDescription | grep -q '^Orca Leo allows'
+          /usr/libexec/PlistBuddy -c 'Print :NSDocumentsFolderUsageDescription' \
+            "$app/Contents/Frameworks/Orca Helper.app/Contents/Info.plist" | grep -q '^Orca Leo allows'
           test "$(read_plist CFBundleShortVersionString)" = "$ORCA_LEO_VERSION"
           helper="$app/Contents/Resources/Orca Computer Use.app/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$helper"
