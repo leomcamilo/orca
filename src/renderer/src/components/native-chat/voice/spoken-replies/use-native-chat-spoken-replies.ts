@@ -159,7 +159,9 @@ export function useSpokenReplyJournal(journalItems: readonly AgentJournalRenderI
     (store) => store.dictationState === 'starting' || store.dictationState === 'listening'
   )
   const inCall = useVoiceCallPresence((state) => state.calls > 0)
-  const quiet = dictating || inCall || spoken?.visible !== true
+  // Its own microphone, opened to hear the person talk over the reply, does not quiet it.
+  const overhearing = useSpokenReplyMode((state) => state.overhearing === sessionId)
+  const quiet = (dictating && !overhearing) || inCall || spoken?.visible !== true
   useEffect(() => {
     if (sessionId === null) {
       return

@@ -1,5 +1,6 @@
 import type { SecretAtRestProtection } from '../../../shared/secret-at-rest-protection'
 import type { DictationCleanupResult } from '../../../shared/dictation-cleanup'
+import type { SystemVoiceRenderRequest } from '../../../shared/system-voice-render'
 import type {
   DictationContext,
   OpenAiCompatibleSpeechProvider,
@@ -46,6 +47,9 @@ export type SpeechApi = {
     requestId: string
   ) => Promise<DictationCleanupResult>
   cancelDictationCleanup?: (requestId: string) => Promise<void>
+  /** One spoken line as a WAV in the system voice; null where the host cannot render one. Absent
+   *  in the web client. */
+  renderSystemVoice?: (request: SystemVoiceRenderRequest) => Promise<Uint8Array | null>
   onPartialTranscript: (callback: (data: SpeechTranscriptEvent) => void) => () => void
   onFinalTranscript: (callback: (data: SpeechTranscriptEvent) => void) => () => void
   onSpeechPending: (callback: (data: SpeechPendingEvent) => void) => () => void

@@ -22442,7 +22442,9 @@
           "voiceLabel": "Voz",
           "voiceDescription": "Uma voz instalada neste computador. Automática segue o idioma do ditado ou do app.",
           "sampleText": "É assim que as respostas vão soar.",
-          "automaticVoice": "Automática"
+          "automaticVoice": "Automática",
+          "interruptLabel": "Interromper falando",
+          "interruptDescription": "Enquanto um chat escuta a sua vez, mantém o microfone aberto durante a leitura da resposta e cala a leitura quando você fala por cima. O agente continua trabalhando. Só no macOS. Use fones se a voz interromper a si mesma."
         }
       },
       "repositoryHooks": {

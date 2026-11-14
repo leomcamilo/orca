@@ -1,5 +1,10 @@
 import { create } from 'zustand'
 import {
+  appVoiceAudio,
+  createAppVoiceSynthesizer,
+  type AppVoiceSynthesizer
+} from './spoken-reply-app-voice'
+import {
   SpokenReplySpeech,
   type SpokenReplyLine,
   type SpokenReplySynthesizer,
@@ -86,6 +91,23 @@ function whenSystemVoicesListed(synthesis: SpeechSynthesis, speak: () => void): 
   setTimeout(run, VOICES_WAIT_MS)
 }
 
+let appVoiceSynthesizer: AppVoiceSynthesizer | null = null
+
+function appVoice(synthesis: SpeechSynthesis): AppVoiceSynthesizer {
+  appVoiceSynthesizer = createAppVoiceSynthesizer({
+    // Absent in the web client and on a host that predates it: the system speaks directly.
+    render: async (request) => (await window.api.speech.renderSystemVoice?.(request)) ?? null,
+    audio: appVoiceAudio,
+    system: systemSynthesizer(synthesis)
+  })
+  return appVoiceSynthesizer
+}
+
+/** The line being read is playing through the app's own audio. */
+export function spokenReplyPlaysThroughApp(): boolean {
+  return appVoiceSynthesizer?.playsThroughApp() === true
+}
+
 let speech: SpokenReplySpeech | null | undefined
 
 /** Null where the platform has no speech synthesis. */
@@ -96,7 +118,7 @@ export function systemSpokenReplySpeech(): SpokenReplySpeech | null {
     synthesis?.getVoices()
     speech = synthesis
       ? new SpokenReplySpeech(
-          systemSynthesizer(synthesis),
+          appVoice(synthesis),
           (line) => useSpokenReplyLine.setState({ line }),
           {
             afterCancel: (next) => setTimeout(next, AFTER_CANCEL_MS),
