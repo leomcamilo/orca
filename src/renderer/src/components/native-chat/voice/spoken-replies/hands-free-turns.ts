@@ -39,14 +39,16 @@ type Phase =
   | { name: 'listening'; since: number; lastSpeechAt: number | null; speaking: boolean }
   | { name: 'sent'; since: number; sawWork: boolean }
 
-const RESTING: Phase = { name: 'resting', readySince: null }
+function ready(facts: HandsFreeFacts): boolean {
+  return facts.dictation === 'idle' && !facts.agentWorking && !facts.voiceSpeaking && facts.canSend
+}
 
 /** Takes turns with the agent by voice: opens the microphone once the agent has finished and its
  *  reply has been read, sends what was said after a pause, then waits for the next reply. The
  *  microphone stays closed while the agent works or speaks. It sends only the dictation it opened
  *  into its own composer; dictation the person starts anywhere is theirs, and this waits it out. */
 export class HandsFreeTurns {
-  private phase: Phase = { ...RESTING }
+  private phase: Phase = { name: 'resting', readySince: null }
   private failedOpens = 0
   // Noise passes for speech at the meter, but sends nothing; it must not keep the microphone open.
   private unheardSends = 0
@@ -83,9 +85,7 @@ export class HandsFreeTurns {
     }
     const phase = this.phase
     if (phase.name === 'resting') {
-      const ready =
-        facts.dictation === 'idle' && !facts.agentWorking && !facts.voiceSpeaking && facts.canSend
-      if (!ready) {
+      if (!ready(facts)) {
         phase.readySince = null
         return null
       }
@@ -100,20 +100,22 @@ export class HandsFreeTurns {
       if (facts.dictation === 'listening') {
         // A dictation that lands elsewhere started in the same moment; it is not this chat's.
         this.failedOpens = 0
-        this.phase = facts.ownsDictation
-          ? { name: 'listening', since: now, lastSpeechAt: null, speaking: false }
-          : { ...RESTING }
+        if (facts.ownsDictation) {
+          this.phase = { name: 'listening', since: now, lastSpeechAt: null, speaking: false }
+        } else {
+          this.rest(facts)
+        }
       } else if (facts.dictation === 'idle' && now - phase.since >= OPEN_TIMEOUT_MS) {
         // A microphone that will not open (no model, no permission) is not asked forever.
         this.failedOpens += 1
-        this.phase = { ...RESTING }
+        this.rest(facts)
         return this.failedOpens >= 2 ? 'give-up' : null
       }
       return null
     }
     if (phase.name === 'listening') {
       if (facts.dictation === 'idle' || !facts.ownsDictation) {
-        this.phase = { ...RESTING }
+        this.rest(facts)
         return null
       }
       if (facts.dictation !== 'listening') {
@@ -143,7 +145,7 @@ export class HandsFreeTurns {
     if (phase.sawWork) {
       this.unheardSends = 0
       if (!facts.agentWorking) {
-        this.phase = { ...RESTING }
+        this.rest(facts)
       }
       return null
     }
@@ -151,7 +153,13 @@ export class HandsFreeTurns {
       return null
     }
     this.unheardSends += 1
-    this.phase = { ...RESTING }
+    this.rest(facts)
     return this.unheardSends >= 2 ? 'close-unheard' : null
+  }
+
+  /** Back to rest. The settle starts here when the room is already ready: no change may come
+   *  afterwards to start it, and a turn that only changes can move would wait forever. */
+  private rest(facts: HandsFreeFacts): void {
+    this.phase = { name: 'resting', readySince: ready(facts) ? facts.now : null }
   }
 }

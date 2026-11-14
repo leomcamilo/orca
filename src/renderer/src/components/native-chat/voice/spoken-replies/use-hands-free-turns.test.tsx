@@ -117,3 +117,53 @@ it('leaves a dictation that lands elsewhere alone, and closes a microphone nobod
   wait(30_000)
   expect(events).toEqual(['open microphone', 'disarmed'])
 })
+
+it('opens again after a turn that has nothing to read, since no change follows the agent finishing', () => {
+  const { events, rerender, speak, dictationIs, wait } = listenForTurns()
+  wait(600)
+  dictationIs('listening')
+  speak(true)
+  speak(false)
+  wait(1400)
+  dictationIs('idle')
+  rerender({ line: null, agentWorking: true })
+  rerender({ line: null, agentWorking: false })
+  wait(600)
+  expect(events).toEqual(['open microphone', 'send', 'open microphone'])
+})
+
+it('tries a microphone that will not open once more, then stops listening', () => {
+  const { events, wait } = listenForTurns()
+  wait(600)
+  wait(5000)
+  wait(600)
+  expect(events).toEqual(['open microphone', 'open microphone'])
+  wait(5000)
+  expect(events).toEqual(['open microphone', 'open microphone', 'disarmed'])
+})
+
+it('listens again after sound without words, and stops listening the second time', () => {
+  const { events, speak, dictationIs, wait } = listenForTurns()
+  const soundWithoutWords = (): void => {
+    wait(600)
+    dictationIs('listening')
+    speak(true)
+    speak(false)
+    wait(1400)
+    dictationIs('idle')
+    wait(4000)
+  }
+  soundWithoutWords()
+  expect(events).toEqual(['open microphone', 'send'])
+  soundWithoutWords()
+  expect(events).toEqual(['open microphone', 'send', 'open microphone', 'send', 'disarmed'])
+})
+
+it('opens again when the dictation it was listening to ends by itself', () => {
+  const { events, dictationIs, wait } = listenForTurns()
+  wait(600)
+  dictationIs('listening')
+  dictationIs('idle')
+  wait(600)
+  expect(events).toEqual(['open microphone', 'open microphone'])
+})
