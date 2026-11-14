@@ -8,6 +8,7 @@ import {
 } from './updater-state'
 import { UpdaterCheckFailure } from './updater-check-failure'
 import { getDelayedUpdateWakeDelayMs } from '../releases/updater-release-delay'
+import { ORCA_LEO_DISTRIBUTION } from '../../orca-leo/orca-leo-distribution'
 
 export abstract class UpdaterScheduling extends UpdaterCheckFailure {
   protected getAutomaticRetryInterval(): number {
@@ -64,7 +65,7 @@ export abstract class UpdaterScheduling extends UpdaterCheckFailure {
     if (this.backgroundCheckLaunchPending || this.currentStatus.state === 'checking') {
       return false
     }
-    if (!app.isPackaged) {
+    if (!app.isPackaged || ORCA_LEO_DISTRIBUTION.updatesOff) {
       this.sendStatus({ state: 'not-available' })
       return false
     }
