@@ -12,6 +12,7 @@ import { applyProxyToElectronUpdaterSession } from './electron-updater-proxy-ses
 import { updaterErrorMessage } from './updater-coded-error'
 import { updaterCodedMessage } from '../../../shared/updater-failure-copy'
 import { normalizeUpdateDelayDays } from '../../../shared/update-delay'
+import { isOrcaLeoVersion } from '../../../shared/orca-leo/orca-leo-distribution'
 import {
   checkForUpdatesFromMenu,
   dismissAvailableUpdate,
@@ -182,6 +183,10 @@ export function registerUpdaterHandlers(_store: Store): void {
     ): Promise<ReleaseBuildListResult> => {
       if (!RELEASE_CHANNELS.includes(channel)) {
         return { ok: false, channel, ...updaterCodedMessage('unknownReleaseChannel', { channel }) }
+      }
+      // An Orca Leo package takes no build from the official feed, so it asks for no list of them.
+      if (isOrcaLeoVersion(app.getVersion())) {
+        return { ok: true, channel, builds: [] }
       }
       try {
         return {

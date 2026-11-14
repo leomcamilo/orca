@@ -1,4 +1,5 @@
 import { compareAppVersions, isValidAppVersion } from './app-version'
+import { isOrcaLeoVersion } from './orca-leo/orca-leo-distribution'
 
 export type ReleaseChannel = 'stable' | 'rc' | 'hourly' | 'daily' | 'adhoc'
 
@@ -168,6 +169,10 @@ export function getVersionChannel(version: string): ReleaseChannel | null {
   }
   if (isAdhocVersion(normalized)) {
     return 'adhoc'
+  }
+  // An Orca Leo package is cut from a stable release; its "-leo.N" is not a prerelease channel.
+  if (isOrcaLeoVersion(normalized)) {
+    return 'stable'
   }
   // Why the dev channels are tested first: they are prereleases too, so this
   // catch-all would otherwise file every one of them under rc.
