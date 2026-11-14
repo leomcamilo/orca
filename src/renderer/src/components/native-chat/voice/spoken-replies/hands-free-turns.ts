@@ -9,15 +9,25 @@ export type HandsFreeFacts = {
   agentWorking: boolean
   /** A reply is being read aloud, or is about to be. */
   voiceSpeaking: boolean
+  /** The reply plays through the app, so the microphone can stay open on it and tell the
+   *  person's voice from it. */
+  voiceCancelsEcho: boolean
   /** The composer would take a send. */
   canSend: boolean
+  /** The composer holds words, dictated or typed. */
+  hasDraft: boolean
   now: number
 }
 
-/** `close-unused`: nobody spoke into the open microphone. `close-unheard`: what it heard held no
- *  words, twice. `give-up`: it would not open. */
+/** `overhear`: open the microphone while the reply is read. `interrupt-voice`: the person talked
+ *  over the reply; quiet it and keep listening. `stop-overhearing`: the reply ended untouched;
+ *  drop what the microphone took in. `close-unused`: nobody spoke into the open microphone.
+ *  `close-unheard`: what it heard held no words, twice. `give-up`: it would not open. */
 export type HandsFreeAction =
   | 'open-microphone'
+  | 'overhear'
+  | 'interrupt-voice'
+  | 'stop-overhearing'
   | 'send'
   | 'close-unused'
   | 'close-unheard'
@@ -30,14 +40,25 @@ export const HANDS_FREE_SETTLE_MS = 600
 export const HANDS_FREE_END_OF_SPEECH_MS = 1400
 // An open microphone nobody talks into is closed: it costs battery, and money on a cloud model.
 export const HANDS_FREE_NO_SPEECH_MS = 30_000
+// A cough or a click is shorter than this; a word is not.
+export const HANDS_FREE_INTERRUPT_MS = 400
 const OPEN_TIMEOUT_MS = 5000
 const SENT_WITHOUT_WORK_MS = 4000
+// A message that did go out may wake a resting agent, which takes a while to start working.
+const SENT_WAITS_FOR_WORK_MS = 60_000
 
 type Phase =
   | { name: 'resting'; readySince: number | null }
   | { name: 'opening'; since: number }
-  | { name: 'listening'; since: number; lastSpeechAt: number | null; speaking: boolean }
-  | { name: 'sent'; since: number; sawWork: boolean }
+  | { name: 'overhearing'; speechSince: number | null }
+  | {
+      name: 'listening'
+      since: number
+      lastSpeechAt: number | null
+      speaking: boolean
+      wrote: boolean
+    }
+  | { name: 'sent'; since: number; sawWork: boolean; wrote: boolean }
 
 function ready(facts: HandsFreeFacts): boolean {
   return facts.dictation === 'idle' && !facts.agentWorking && !facts.voiceSpeaking && facts.canSend
@@ -45,8 +66,10 @@ function ready(facts: HandsFreeFacts): boolean {
 
 /** Takes turns with the agent by voice: opens the microphone once the agent has finished and its
  *  reply has been read, sends what was said after a pause, then waits for the next reply. The
- *  microphone stays closed while the agent works or speaks. It sends only the dictation it opened
- *  into its own composer; dictation the person starts anywhere is theirs, and this waits it out. */
+ *  microphone stays closed while the agent works or speaks, unless the reply plays through the
+ *  app: then it opens on the reply, and the person talking over it quiets the reply without
+ *  stopping the agent. It sends only the dictation it opened into its own composer; dictation
+ *  the person starts anywhere is theirs, and this waits it out. */
 export class HandsFreeTurns {
   private phase: Phase = { name: 'resting', readySince: null }
   private failedOpens = 0
@@ -65,15 +88,19 @@ export class HandsFreeTurns {
           : phase.readySince + HANDS_FREE_SETTLE_MS
         : phase.name === 'opening'
           ? phase.since + OPEN_TIMEOUT_MS
-          : phase.name === 'listening'
-            ? phase.speaking
+          : phase.name === 'overhearing'
+            ? phase.speechSince === null
               ? null
-              : phase.lastSpeechAt === null
-                ? phase.since + HANDS_FREE_NO_SPEECH_MS
-                : phase.lastSpeechAt + HANDS_FREE_END_OF_SPEECH_MS
-            : phase.sawWork
-              ? null
-              : phase.since + SENT_WITHOUT_WORK_MS
+              : phase.speechSince + HANDS_FREE_INTERRUPT_MS
+            : phase.name === 'listening'
+              ? phase.speaking
+                ? null
+                : phase.lastSpeechAt === null
+                  ? phase.since + HANDS_FREE_NO_SPEECH_MS
+                  : phase.lastSpeechAt + HANDS_FREE_END_OF_SPEECH_MS
+              : phase.sawWork
+                ? null
+                : phase.since + (phase.wrote ? SENT_WAITS_FOR_WORK_MS : SENT_WITHOUT_WORK_MS)
     return at !== null && at > this.lookedAt ? at : null
   }
 
@@ -85,6 +112,15 @@ export class HandsFreeTurns {
     }
     const phase = this.phase
     if (phase.name === 'resting') {
+      if (
+        facts.voiceSpeaking &&
+        facts.voiceCancelsEcho &&
+        facts.dictation === 'idle' &&
+        facts.canSend
+      ) {
+        this.phase = { name: 'overhearing', speechSince: null }
+        return 'overhear'
+      }
       if (!ready(facts)) {
         phase.readySince = null
         return null
@@ -96,12 +132,40 @@ export class HandsFreeTurns {
       this.phase = { name: 'opening', since: now }
       return 'open-microphone'
     }
+    if (phase.name === 'overhearing') {
+      const mine = facts.dictation === 'listening' && facts.ownsDictation
+      if (!facts.voiceSpeaking) {
+        this.rest(facts)
+        return mine || facts.dictation === 'starting' ? 'stop-overhearing' : null
+      }
+      if (facts.dictation === 'listening' && !facts.ownsDictation) {
+        this.rest(facts)
+        return null
+      }
+      if (!mine || !facts.userSpeaking) {
+        phase.speechSince = null
+        return null
+      }
+      phase.speechSince ??= now
+      if (now - phase.speechSince < HANDS_FREE_INTERRUPT_MS) {
+        return null
+      }
+      // The person is mid-word: their turn has begun.
+      this.phase = { name: 'listening', since: now, lastSpeechAt: now, speaking: true, wrote: false }
+      return 'interrupt-voice'
+    }
     if (phase.name === 'opening') {
       if (facts.dictation === 'listening') {
         // A dictation that lands elsewhere started in the same moment; it is not this chat's.
         this.failedOpens = 0
         if (facts.ownsDictation) {
-          this.phase = { name: 'listening', since: now, lastSpeechAt: null, speaking: false }
+          this.phase = {
+            name: 'listening',
+            since: now,
+            lastSpeechAt: null,
+            speaking: false,
+            wrote: false
+          }
         } else {
           this.rest(facts)
         }
@@ -118,6 +182,7 @@ export class HandsFreeTurns {
         this.rest(facts)
         return null
       }
+      phase.wrote ||= facts.hasDraft
       if (facts.dictation !== 'listening') {
         return null
       }
@@ -135,10 +200,12 @@ export class HandsFreeTurns {
       if (now - phase.lastSpeechAt < HANDS_FREE_END_OF_SPEECH_MS) {
         return null
       }
-      this.phase = { name: 'sent', since: now, sawWork: false }
+      this.phase = { name: 'sent', since: now, sawWork: false, wrote: phase.wrote }
       return 'send'
     }
     phase.sawWork ||= facts.agentWorking
+    // A cloud model's words land only now, after the microphone closes.
+    phase.wrote ||= facts.hasDraft
     if (facts.dictation !== 'idle') {
       return null
     }
@@ -149,7 +216,12 @@ export class HandsFreeTurns {
       }
       return null
     }
-    if (now - phase.since < SENT_WITHOUT_WORK_MS) {
+    if (now - phase.since < (phase.wrote ? SENT_WAITS_FOR_WORK_MS : SENT_WITHOUT_WORK_MS)) {
+      return null
+    }
+    if (phase.wrote) {
+      this.unheardSends = 0
+      this.rest(facts)
       return null
     }
     this.unheardSends += 1

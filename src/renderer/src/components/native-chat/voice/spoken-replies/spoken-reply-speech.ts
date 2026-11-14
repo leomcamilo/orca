@@ -14,6 +14,8 @@ export type SpokenReplySynthesizer = {
   /** `onDone` fires once, when the line ends, fails or is cancelled. */
   speak: (text: string, pick: SpokenReplyVoicePick, onDone: () => void) => void
   cancel: () => void
+  /** Told a reply's lines as its first is spoken, so the rest can be made ready meanwhile. */
+  prepare?: (lines: readonly string[], pick: SpokenReplyVoicePick) => void
 }
 
 export type SpokenReplyLine = { owner: string; text: string }
@@ -136,7 +138,11 @@ export class SpokenReplySpeech {
       if (this.current !== spoken) {
         return
       }
-      this.synthesizer.speak(job.lines[line], job.pick(), () => {
+      const pick = job.pick()
+      if (line === 0) {
+        this.synthesizer.prepare?.(job.lines, pick)
+      }
+      this.synthesizer.speak(job.lines[line], pick, () => {
         // A cancelled line still reports its end; only the one being spoken moves the queue.
         if (this.current !== spoken) {
           return

@@ -76,6 +76,20 @@ export function VoiceSpokenRepliesSettings({
         disabled={unavailable && !on}
         onChange={() => onUpdateVoiceSettings({ spokenReplies: !on })}
       />
+      <SettingsSwitchRow
+        label={t('components.settings.voice.spokenReplies.interruptLabel', 'Interrupt by talking')}
+        description={t(
+          'components.settings.voice.spokenReplies.interruptDescription',
+          'While a chat listens for your turn, keeps the microphone open as a reply is read and quiets the reply when you talk over it. The agent keeps working. On macOS only. Use headphones if the voice interrupts itself.'
+        )}
+        checked={voiceSettings.spokenReplyInterrupt === true}
+        disabled={!on}
+        onChange={() =>
+          onUpdateVoiceSettings({
+            spokenReplyInterrupt: voiceSettings.spokenReplyInterrupt !== true
+          })
+        }
+      />
       <SettingsRow
         className="flex-col items-stretch @lg:flex-row @lg:items-center"
         label={t('components.settings.voice.spokenReplies.voiceLabel', 'Voice')}

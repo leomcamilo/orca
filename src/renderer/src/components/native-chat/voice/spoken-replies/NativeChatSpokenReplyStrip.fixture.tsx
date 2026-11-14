@@ -25,6 +25,7 @@ const RESTING = {
   dictationUnavailable: false,
   agentWorking: false,
   canSend: false,
+  hasDraft: false,
   onOpenMicrophone: () => {},
   onSend: () => {}
 }

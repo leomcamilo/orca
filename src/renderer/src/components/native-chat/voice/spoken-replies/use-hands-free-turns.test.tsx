@@ -51,6 +51,7 @@ function listenForTurns() {
           dictationUnavailable: false,
           agentWorking,
           canSend: true,
+          hasDraft: false,
           onOpenMicrophone: () => events.push('open microphone'),
           onSend: () => events.push('send')
         },

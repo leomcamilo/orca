@@ -7,10 +7,19 @@ const quiet: Omit<HandsFreeFacts, 'now'> = {
   userSpeaking: false,
   agentWorking: false,
   voiceSpeaking: false,
-  canSend: true
+  voiceCancelsEcho: false,
+  canSend: true,
+  hasDraft: false
 }
 const mine: Omit<HandsFreeFacts, 'now'> = { ...quiet, dictation: 'listening', ownsDictation: true }
 const elsewhere: Omit<HandsFreeFacts, 'now'> = { ...quiet, dictation: 'listening' }
+// A reply played through the app, and this chat's microphone open on it.
+const reply: Omit<HandsFreeFacts, 'now'> = {
+  ...quiet,
+  voiceSpeaking: true,
+  voiceCancelsEcho: true
+}
+const overheard: Omit<HandsFreeFacts, 'now'> = { ...reply, ...mine, voiceSpeaking: true }
 
 describe('HandsFreeTurns', () => {
   it('opens the microphone after the reply, sends after a pause, and waits for the next reply', () => {
@@ -107,5 +116,64 @@ describe('HandsFreeTurns', () => {
     expect(turns.next({ ...quiet, now: 13_300 })).toBe('open-microphone')
     expect(turns.next({ ...quiet, now: 18_300 })).toBe('give-up')
     expect(new HandsFreeTurns().next({ ...quiet, dictation: 'error', now: 0 })).toBe('give-up')
+  })
+
+  it('sends once and keeps the microphone closed while a sent message wakes a slow agent', () => {
+    const turns = new HandsFreeTurns()
+    const actions: string[] = []
+    let now = 0
+    const step = (facts: Omit<HandsFreeFacts, 'now'>, ms: number): void => {
+      now += ms
+      const action = turns.next({ ...facts, now })
+      if (action) {
+        actions.push(action)
+      }
+    }
+    step(quiet, 0)
+    step(quiet, 600)
+    step(mine, 200)
+    step({ ...mine, userSpeaking: true, hasDraft: true }, 200)
+    step({ ...mine, hasDraft: true }, 100)
+    step({ ...mine, hasDraft: true }, 1400)
+    step({ ...quiet, dictation: 'stopping' }, 200)
+    // The message is out or queued, and the agent takes 30 s to start working.
+    for (let waited = 0; waited < 30_000; waited += 200) {
+      step(quiet, 200)
+    }
+    expect(actions).toEqual(['open-microphone', 'send'])
+    step({ ...quiet, agentWorking: true }, 200)
+    // The agent is done; the microphone opens once the room has settled.
+    step(quiet, 5000)
+    step(quiet, 100)
+    step(quiet, 600)
+    expect(actions).toEqual(['open-microphone', 'send', 'open-microphone'])
+  })
+
+  it('opens on a reply played through the app and quiets it when the person talks over it', () => {
+    const turns = new HandsFreeTurns()
+    expect(turns.next({ ...reply, now: 0 })).toBe('overhear')
+    expect(turns.next({ ...overheard, now: 300 })).toBeNull()
+    // A click is too short to be the person talking.
+    expect(turns.next({ ...overheard, userSpeaking: true, now: 500 })).toBeNull()
+    expect(turns.next({ ...overheard, now: 700 })).toBeNull()
+    expect(turns.next({ ...overheard, userSpeaking: true, now: 900 })).toBeNull()
+    expect(turns.next({ ...overheard, userSpeaking: true, now: 1100 })).toBeNull()
+    expect(turns.next({ ...overheard, userSpeaking: true, now: 1300 })).toBe('interrupt-voice')
+    // From there it is the person's turn: their words go out after a pause.
+    expect(turns.next({ ...mine, userSpeaking: true, now: 2000 })).toBeNull()
+    expect(turns.next({ ...mine, now: 2100 })).toBeNull()
+    expect(turns.next({ ...mine, now: 3500 })).toBe('send')
+  })
+
+  it('drops what the microphone took in when the reply ends untouched, then listens afresh', () => {
+    const turns = new HandsFreeTurns()
+    expect(turns.next({ ...reply, now: 0 })).toBe('overhear')
+    expect(turns.next({ ...overheard, now: 300 })).toBeNull()
+    expect(turns.next({ ...mine, now: 4000 })).toBe('stop-overhearing')
+    expect(turns.next({ ...quiet, now: 4200 })).toBeNull()
+    expect(turns.next({ ...quiet, now: 4800 })).toBe('open-microphone')
+    // The system speaking directly cannot be told from the person, so the microphone stays shut.
+    const direct = new HandsFreeTurns()
+    expect(direct.next({ ...quiet, voiceSpeaking: true, now: 0 })).toBeNull()
   })
 })
