@@ -84,3 +84,13 @@ build e outro. Os scripts de assinatura, verificação, troca e retorno ficam fo
 `~/Library/Application Support/orca-leo/`.
 
 O app assinado assim vale só para os aparelhos do Leo. Não é para distribuir.
+
+### Ao mudar uma permissão do macOS
+
+O Orca Leo e o Orca oficial têm o mesmo bundle id. Se o macOS oferecer "Encerrar e Reabrir" depois de
+uma mudança em Privacidade e Segurança, ele reabre a cópia que está em `/Applications`, que é o Orca
+oficial, no mesmo perfil. Por isso:
+
+1. escolher "Mais Tarde";
+2. sair do Orca Leo pelo Cmd-Q;
+3. abrir pelo caminho: `open "$HOME/orca-leo/Orca Leo.app"`.
