@@ -34,6 +34,7 @@ import {
   getDialogDescription,
   getNotesPlaceholder
 } from './crash-report-dialog-copy'
+import { withOrcaLeoName } from '../../../../shared/orca-leo/orca-leo-distribution'
 
 type CrashReportDialogSurfaceProps = {
   open: boolean
@@ -227,7 +228,9 @@ export function CrashReportDialogSurface({
                       : report.createdAt
                   ).toLocaleString(intlLocale)}{' '}
                   · {report.platform} {report.arch} ·{' '}
-                  {t('auto.components.crash.report.CrashReportDialog.835037edc9', 'Orca')}{' '}
+                  {withOrcaLeoName(
+                    t('auto.components.crash.report.CrashReportDialog.835037edc9', 'Orca')
+                  )}{' '}
                   {report.appVersion}
                 </div>
               </div>
