@@ -3,7 +3,7 @@ import { isMacInstallRequested } from '../mac-install/updater-mac-install'
 import type { UpdateCheckOptions } from '../../../shared/update-status-types'
 import type { ReleaseChannel } from '../../../shared/release-channel'
 import { UpdaterScheduling } from './updater-scheduling'
-import { ORCA_LEO_DISTRIBUTION } from '../../../shared/orca-leo/orca-leo-distribution'
+import { isOrcaLeoVersion } from '../../../shared/orca-leo/orca-leo-distribution'
 
 export abstract class UpdaterMenuChecks extends UpdaterScheduling {
   protected checkForUpdatesFromMenu(options?: UpdateCheckOptions): void {
@@ -14,7 +14,7 @@ export abstract class UpdaterMenuChecks extends UpdaterScheduling {
     ) {
       return
     }
-    if (!app.isPackaged || ORCA_LEO_DISTRIBUTION.updatesOff) {
+    if (!app.isPackaged || isOrcaLeoVersion(app.getVersion())) {
       this.sendStatus({ state: 'not-available', userInitiated: true })
       return
     }

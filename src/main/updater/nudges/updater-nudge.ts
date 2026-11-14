@@ -2,11 +2,11 @@ import { app } from 'electron'
 import { fetchNudge, shouldApplyNudge } from './nudge-campaign'
 import { NUDGE_ACTIVATION_COOLDOWN_MS, NUDGE_POLL_INTERVAL_MS } from '../lifecycle/updater-state'
 import { UpdaterBuildSelection } from '../releases/updater-build-selection'
-import { ORCA_LEO_DISTRIBUTION } from '../../../shared/orca-leo/orca-leo-distribution'
+import { isOrcaLeoVersion } from '../../../shared/orca-leo/orca-leo-distribution'
 
 export abstract class UpdaterNudge extends UpdaterBuildSelection {
   protected async checkForUpdateNudge(): Promise<void> {
-    if (!app.isPackaged || ORCA_LEO_DISTRIBUTION.updatesOff) {
+    if (!app.isPackaged || isOrcaLeoVersion(app.getVersion())) {
       return
     }
     if (this.nudgeCheckInFlight) {
