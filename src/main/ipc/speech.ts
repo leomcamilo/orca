@@ -9,6 +9,7 @@ import { abortWhenRendererGone } from './renderer-lifetime-abort'
 import { dictationTermsFor } from '../../shared/dictation-dictionary'
 import { dictationTextSettingsFor } from '../../shared/dictation-cleanup'
 import { SPEECH_MODEL_CATALOG } from '../speech/model-catalog'
+import { cancelOpenAiSpeech, synthesizeOpenAiSpeech } from '../speech/openai-speech-synthesis'
 import { deleteLocalSpeechModel } from '../speech/speech-model-deletion'
 import { getSpeechModelManager, getSpeechSttService } from '../speech/speech-runtime-service'
 import {
@@ -67,6 +68,14 @@ export function registerSpeechHandlers(
     if (typeof requestId === 'string') {
       cancelDictationCleanup(requestId)
     }
+  })
+
+  ipcMain.handle('speech:synthesizeSpeech', (_event, request: unknown) =>
+    synthesizeOpenAiSpeech(request)
+  )
+
+  ipcMain.handle('speech:cancelSpeechSynthesis', (_event, requestId: unknown) => {
+    cancelOpenAiSpeech(requestId)
   })
 
   ipcMain.handle('speech:getCatalog', () => {

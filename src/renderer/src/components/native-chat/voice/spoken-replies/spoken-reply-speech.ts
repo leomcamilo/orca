@@ -1,3 +1,5 @@
+import type { OpenAiSpeechVoice } from '../../../../../../shared/speech-synthesis'
+
 /** The slice of the Web Speech API the queue drives, so a test can stand in for the system voice. */
 export type SpokenReplyVoice = {
   voiceURI: string
@@ -7,13 +9,21 @@ export type SpokenReplyVoice = {
   default: boolean
 }
 
-/** The voice to speak with. Without one, the language still tells the system which to use. */
-export type SpokenReplyVoicePick = { voice: SpokenReplyVoice | null; language: string | null }
+/** The voice to speak with. Without one, the language still tells the system which to use.
+ *  With `api`, a speech service reads the line instead of the system. */
+export type SpokenReplyVoicePick = {
+  voice: SpokenReplyVoice | null
+  language: string | null
+  api?: { voice: OpenAiSpeechVoice }
+}
 
 export type SpokenReplySynthesizer = {
-  /** `onDone` fires once, when the line ends, fails or is cancelled. */
-  speak: (text: string, pick: SpokenReplyVoicePick, onDone: () => void) => void
+  /** `onDone` fires once, when the line ends, is cancelled, or fails; a failed line ends its
+   *  reply, since the lines after it would fail the same way. */
+  speak: (text: string, pick: SpokenReplyVoicePick, onDone: (failed?: boolean) => void) => void
   cancel: () => void
+  /** Told a reply's lines as its first is spoken, so the rest can be made ready meanwhile. */
+  prepare?: (lines: readonly string[], pick: SpokenReplyVoicePick) => void
 }
 
 export type SpokenReplyLine = { owner: string; text: string }
@@ -136,13 +146,17 @@ export class SpokenReplySpeech {
       if (this.current !== spoken) {
         return
       }
-      this.synthesizer.speak(job.lines[line], job.pick(), () => {
+      const pick = job.pick()
+      if (line === 0) {
+        this.synthesizer.prepare?.(job.lines, pick)
+      }
+      this.synthesizer.speak(job.lines[line], pick, (failed) => {
         // A cancelled line still reports its end; only the one being spoken moves the queue.
         if (this.current !== spoken) {
           return
         }
         this.current = null
-        if (line + 1 < job.lines.length) {
+        if (!failed && line + 1 < job.lines.length) {
           this.speakLine(job, line + 1)
           return
         }

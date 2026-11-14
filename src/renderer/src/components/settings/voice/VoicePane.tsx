@@ -375,6 +375,7 @@ export function VoicePane({
 
       <VoiceSpokenRepliesSettings
         voiceSettings={voiceSettings}
+        onAddOpenAiKey={() => setOpenAiDialogOpen(true)}
         onUpdateVoiceSettings={updateVoiceSettings}
       />
 

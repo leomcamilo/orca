@@ -1,4 +1,5 @@
 import type { DictationTerm } from './dictation-dictionary'
+import type { SpokenReplyProvider } from './speech-synthesis'
 export type SpeechModelType =
   | 'transducer'
   | 'paraformer'
@@ -152,6 +153,10 @@ export type VoiceSettings = {
   spokenReplies?: boolean
   /** The system voice that reads replies, by its URI. Absent, or a voice the system no longer has = one chosen by language. */
   spokenReplyVoice?: string
+  /** Who reads spoken replies. Absent = the system voice. */
+  spokenReplyProvider?: SpokenReplyProvider
+  /** OpenAI's voice when it reads them. Absent = its recommended default. */
+  spokenReplyOpenAiVoice?: string
 }
 
 /** Where a dictation goes: an engine in the desktop's own process takes repoTerms, a host resolves worktreeId itself. */

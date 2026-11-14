@@ -21827,7 +21827,18 @@
         "handsFreeDisclosure": "O que o microfone ouvir é enviado ao {{agent}} a cada pausa.",
         "handsFreeStopShort": "Parar de escutar",
         "handsFreeWaiting": "Sem escutar enquanto houver rascunho",
-        "handsFreeWaitingDetail": "Envie ou apague o rascunho e o microfone volta a abrir."
+        "handsFreeWaitingDetail": "Envie ou apague o rascunho e o microfone volta a abrir.",
+        "apiFailure": {
+          "title": "A resposta não foi lida em voz alta",
+          "noKey": "Ler respostas com a OpenAI exige uma chave de API da OpenAI. Adicione em Ajustes > Voz.",
+          "unauthorized": "A OpenAI não aceitou a chave de API salva.",
+          "quota": "A conta da OpenAI está sem crédito para fala.",
+          "rateLimited": "A OpenAI está limitando pedidos agora.",
+          "network": "Não foi possível falar com a OpenAI.",
+          "unavailable": "Ler respostas com a OpenAI não está disponível aqui.",
+          "refusedWithReason": "A OpenAI não conseguiu ler a resposta: {{reason}}",
+          "refused": "A OpenAI não conseguiu ler a resposta."
+        }
       }
     },
     "tab": {
@@ -22440,11 +22451,19 @@
           "sample": "Tocar uma amostra",
           "enableLabel": "Oferecer respostas faladas",
           "unavailable": "Este sistema não tem voz de fala instalada.",
-          "enableDescription": "Adiciona um botão de alto-falante ao chat. Com ele ligado, cada mensagem enviada também pede ao agente que abra a resposta com um trecho curto, feito para ouvir, e a voz do sistema lê esse trecho. Código, tabelas e links ficam na tela. Um segundo botão faz o chat escutar a sua vez usando o ditado.",
+          "enableDescription": "Adiciona um botão de alto-falante ao chat. Com ele ligado, cada mensagem enviada também pede ao agente que abra a resposta com um trecho curto, feito para ouvir, e a voz escolhida abaixo lê esse trecho. Código, tabelas e links ficam na tela. Um segundo botão faz o chat escutar a sua vez usando o ditado.",
           "voiceLabel": "Voz",
           "voiceDescription": "Uma voz instalada neste computador. Automática segue o idioma do ditado ou do app.",
           "sampleText": "É assim que as respostas vão soar.",
-          "automaticVoice": "Automática"
+          "automaticVoice": "Automática",
+          "providerLabel": "Quem lê",
+          "providerDescription": "A voz do sistema roda neste computador. A OpenAI recebe o texto que vai ler.",
+          "providerSystem": "Voz do sistema",
+          "providerOpenAi": "OpenAI (API)",
+          "openAiVoiceLabel": "Voz da OpenAI",
+          "openAiVoiceDescription": "Cobrado na sua conta da OpenAI, cerca de US$ 0,015 por minuto de fala por uma estimativa anterior da OpenAI. Modelo gpt-4o-mini-tts, que a OpenAI desliga em 6 de janeiro de 2027.",
+          "openAiNoKey": "Nenhuma chave de API da OpenAI está salva, então nada será lido.",
+          "openAiAddKey": "Adicionar chave"
         }
       },
       "repositoryHooks": {

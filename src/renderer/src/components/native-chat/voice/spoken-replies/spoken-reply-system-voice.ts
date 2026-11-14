@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { createApiVoiceSynthesizer, spokenReplyAudio } from './spoken-reply-api-voice'
+import { showSpokenReplyApiFailure } from './spoken-reply-api-failure'
 import {
   SpokenReplySpeech,
   type SpokenReplyLine,
@@ -96,7 +98,17 @@ export function systemSpokenReplySpeech(): SpokenReplySpeech | null {
     synthesis?.getVoices()
     speech = synthesis
       ? new SpokenReplySpeech(
-          systemSynthesizer(synthesis),
+          createApiVoiceSynthesizer({
+            synthesize: async (request) =>
+              (await window.api.speech.synthesizeSpeech?.(request)) ?? {
+                ok: false,
+                failure: 'unavailable'
+              },
+            cancel: (requestId) => void window.api.speech.cancelSpeechSynthesis?.(requestId),
+            audio: spokenReplyAudio,
+            system: systemSynthesizer(synthesis),
+            onFailure: showSpokenReplyApiFailure
+          }),
           (line) => useSpokenReplyLine.setState({ line }),
           {
             afterCancel: (next) => setTimeout(next, AFTER_CANCEL_MS),

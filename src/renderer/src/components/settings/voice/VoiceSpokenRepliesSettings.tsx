@@ -1,6 +1,4 @@
 import { useId, useSyncExternalStore } from 'react'
-import { Volume2 } from 'lucide-react'
-import { Button } from '../../ui/button'
 import type { VoiceSettings } from '../../../../../shared/speech-types'
 import { useTranslate } from '@/i18n/use-translate'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select'
@@ -11,12 +9,14 @@ import {
   systemSpokenReplySpeech,
   systemSpokenReplyVoices
 } from '@/components/native-chat/voice/spoken-replies/spoken-reply-system-voice'
-import { spokenReplyVoiceFor } from '@/components/native-chat/voice/spoken-replies/use-native-chat-spoken-replies'
+import {
+  SpokenReplySampleButton,
+  VoiceSpokenReplyProviderSettings
+} from './VoiceSpokenReplyProviderSettings'
 import type { SpokenReplyVoice } from '@/components/native-chat/voice/spoken-replies/spoken-reply-speech'
 
 // Radix Select cannot hold an empty value, and a voice URI is never this word.
 const AUTOMATIC_VALUE = 'automatic'
-const SAMPLE_OWNER = 'settings:spoken-reply-sample'
 
 let listedVoices: SpokenReplyVoice[] = []
 let listedKey = ''
@@ -32,12 +32,15 @@ function voicesSnapshot(): SpokenReplyVoice[] {
   return listedVoices
 }
 
-/** Reading replies aloud with the system voice, in chats other than Codex's. */
+/** Reading replies aloud, with the system voice or OpenAI, in chats other than Codex's. */
 export function VoiceSpokenRepliesSettings({
   voiceSettings,
+  onAddOpenAiKey,
   onUpdateVoiceSettings
 }: {
   voiceSettings: VoiceSettings
+  /** Opens the dialog that saves the OpenAI key dictation uses too. */
+  onAddOpenAiKey: () => void
   onUpdateVoiceSettings: (updates: Partial<VoiceSettings>) => void
 }): React.JSX.Element {
   const t = useTranslate()
@@ -47,7 +50,7 @@ export function VoiceSpokenRepliesSettings({
   const chosen = voices.some((voice) => voice.voiceURI === voiceSettings.spokenReplyVoice)
     ? voiceSettings.spokenReplyVoice
     : undefined
-  const sampleLabel = t('components.settings.voice.spokenReplies.sample', 'Play a sample')
+  const usesOpenAi = voiceSettings.spokenReplyProvider === 'openai'
   const unavailable = systemSpokenReplySpeech() === null || voices.length === 0
 
   return (
@@ -69,73 +72,58 @@ export function VoiceSpokenRepliesSettings({
               )
             : t(
                 'components.settings.voice.spokenReplies.enableDescription',
-                'Adds a speaker button to the chat. While it is on, each message you send also asks the agent to open its reply with a short part meant for listening, and your system voice reads that part. Code, tables and links stay on screen. A second button makes the chat listen for your turn with dictation.'
+                'Adds a speaker button to the chat. While it is on, each message you send also asks the agent to open its reply with a short part meant for listening, and the voice chosen below reads that part. Code, tables and links stay on screen. A second button makes the chat listen for your turn with dictation.'
               )
         }
         checked={on}
         disabled={unavailable && !on}
         onChange={() => onUpdateVoiceSettings({ spokenReplies: !on })}
       />
-      <SettingsRow
-        className="flex-col items-stretch @lg:flex-row @lg:items-center"
-        label={t('components.settings.voice.spokenReplies.voiceLabel', 'Voice')}
-        labelId={labelId}
-        description={t(
-          'components.settings.voice.spokenReplies.voiceDescription',
-          'A voice installed on this computer. Automatic follows your dictation or app language.'
-        )}
-        control={
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={sampleLabel}
-              title={sampleLabel}
-              disabled={unavailable}
-              onClick={() => {
-                const speech = systemSpokenReplySpeech()
-                speech?.silence(SAMPLE_OWNER)
-                speech?.say(
-                  SAMPLE_OWNER,
-                  [
-                    t(
-                      'components.settings.voice.spokenReplies.sampleText',
-                      'This is how replies will sound.'
-                    )
-                  ],
-                  () => spokenReplyVoiceFor(voiceSettings)
-                )
-              }}
-            >
-              <Volume2 className="size-3.5" />
-            </Button>
-            <Select
-              value={chosen ?? AUTOMATIC_VALUE}
-              disabled={unavailable}
-              onValueChange={(value) =>
-                onUpdateVoiceSettings({
-                  spokenReplyVoice: value === AUTOMATIC_VALUE ? undefined : value
-                })
-              }
-            >
-              <SelectTrigger size="sm" className="min-w-40" aria-labelledby={labelId}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={AUTOMATIC_VALUE}>
-                  {t('components.settings.voice.spokenReplies.automaticVoice', 'Automatic')}
-                </SelectItem>
-                {voices.map((voice) => (
-                  <SelectItem key={voice.voiceURI} value={voice.voiceURI}>
-                    {`${voice.name} · ${voice.lang}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        }
+      <VoiceSpokenReplyProviderSettings
+        voiceSettings={voiceSettings}
+        disabled={unavailable}
+        onAddOpenAiKey={onAddOpenAiKey}
+        onUpdateVoiceSettings={onUpdateVoiceSettings}
       />
+      {usesOpenAi ? null : (
+        <SettingsRow
+          className="flex-col items-stretch @lg:flex-row @lg:items-center"
+          label={t('components.settings.voice.spokenReplies.voiceLabel', 'Voice')}
+          labelId={labelId}
+          description={t(
+            'components.settings.voice.spokenReplies.voiceDescription',
+            'A voice installed on this computer. Automatic follows your dictation or app language.'
+          )}
+          control={
+            <div className="flex items-center gap-1">
+              <SpokenReplySampleButton voiceSettings={voiceSettings} disabled={unavailable} />
+              <Select
+                value={chosen ?? AUTOMATIC_VALUE}
+                disabled={unavailable}
+                onValueChange={(value) =>
+                  onUpdateVoiceSettings({
+                    spokenReplyVoice: value === AUTOMATIC_VALUE ? undefined : value
+                  })
+                }
+              >
+                <SelectTrigger size="sm" className="min-w-40" aria-labelledby={labelId}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={AUTOMATIC_VALUE}>
+                    {t('components.settings.voice.spokenReplies.automaticVoice', 'Automatic')}
+                  </SelectItem>
+                  {voices.map((voice) => (
+                    <SelectItem key={voice.voiceURI} value={voice.voiceURI}>
+                      {`${voice.name} · ${voice.lang}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          }
+        />
+      )}
     </SettingsGroup>
   )
 }

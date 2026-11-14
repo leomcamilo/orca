@@ -16,7 +16,7 @@ function voice(name: string, lang: string, localService = true): SpokenReplyVoic
 function rig(options = { ready: true }) {
   const spoken: string[] = []
   const lines: (SpokenReplyLine | null)[] = []
-  let finish: (() => void) | null = null
+  let finish: ((failed?: boolean) => void) | null = null
   let afterCancel: (() => void) | null = null
   let whenReady: (() => void) | null = null
   const speech = new SpokenReplySpeech(
@@ -48,6 +48,7 @@ function rig(options = { ready: true }) {
     spoken,
     lines,
     finish: () => finish?.(),
+    fail: () => finish?.(true),
     settle: () => afterCancel?.(),
     becomeReady: () => whenReady?.()
   }
@@ -78,6 +79,17 @@ describe('SpokenReplySpeech', () => {
     settle()
     expect(spoken).toEqual(['One.', 'Other.'])
     expect(lines.at(-1)).toEqual({ owner: 'chat-b', text: 'Other.' })
+  })
+})
+
+describe('a line that fails', () => {
+  it('ends its reply, and the next chat in the queue speaks', () => {
+    const { speech, spoken, lines, fail } = rig()
+    speech.say('chat-a', ['One.', 'Two.'], SYSTEM_CHOICE)
+    speech.say('chat-b', ['Other.'], SYSTEM_CHOICE)
+    fail()
+    expect(spoken).toEqual(['One.', 'Other.'])
+    expect(lines).toContainEqual(null)
   })
 })
 

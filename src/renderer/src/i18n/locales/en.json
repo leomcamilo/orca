@@ -21573,7 +21573,18 @@
         "handsFreeDisclosure": "What the microphone hears is sent to {{agent}} after each pause.",
         "handsFreeStopShort": "Stop listening",
         "handsFreeWaiting": "Not listening while there is a draft",
-        "handsFreeWaitingDetail": "Send or clear the draft and the microphone opens again."
+        "handsFreeWaitingDetail": "Send or clear the draft and the microphone opens again.",
+        "apiFailure": {
+          "title": "The reply was not read aloud",
+          "noKey": "Reading replies with OpenAI needs an OpenAI API key. Add one in Settings > Voice.",
+          "unauthorized": "OpenAI did not accept the saved API key.",
+          "quota": "The OpenAI account has no credit left for speech.",
+          "rateLimited": "OpenAI is limiting requests right now.",
+          "network": "Could not reach OpenAI.",
+          "unavailable": "Reading replies with OpenAI is not available here.",
+          "refusedWithReason": "OpenAI could not read the reply: {{reason}}",
+          "refused": "OpenAI could not read the reply."
+        }
       }
     },
     "tab": {
@@ -22258,11 +22269,19 @@
           "sample": "Play a sample",
           "enableLabel": "Offer spoken replies",
           "unavailable": "This system has no speech voice installed.",
-          "enableDescription": "Adds a speaker button to the chat. While it is on, each message you send also asks the agent to open its reply with a short part meant for listening, and your system voice reads that part. Code, tables and links stay on screen. A second button makes the chat listen for your turn with dictation.",
+          "enableDescription": "Adds a speaker button to the chat. While it is on, each message you send also asks the agent to open its reply with a short part meant for listening, and the voice chosen below reads that part. Code, tables and links stay on screen. A second button makes the chat listen for your turn with dictation.",
           "voiceLabel": "Voice",
           "voiceDescription": "A voice installed on this computer. Automatic follows your dictation or app language.",
           "sampleText": "This is how replies will sound.",
-          "automaticVoice": "Automatic"
+          "automaticVoice": "Automatic",
+          "providerLabel": "Read by",
+          "providerDescription": "The system voice runs on this computer. OpenAI sends the text it reads to OpenAI.",
+          "providerSystem": "System voice",
+          "providerOpenAi": "OpenAI (API)",
+          "openAiVoiceLabel": "OpenAI voice",
+          "openAiVoiceDescription": "Billed to your OpenAI account, about US$ 0.015 per minute of speech by an earlier OpenAI estimate. Model gpt-4o-mini-tts, which OpenAI shuts down on January 6, 2027.",
+          "openAiNoKey": "No OpenAI API key is saved, so nothing will be read.",
+          "openAiAddKey": "Add a key"
         }
       },
       "repositoryHooks": {

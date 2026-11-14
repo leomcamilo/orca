@@ -1,6 +1,10 @@
 import type { SecretAtRestProtection } from '../../../shared/secret-at-rest-protection'
 import type { DictationCleanupResult } from '../../../shared/dictation-cleanup'
 import type {
+  SpeechSynthesisRequest,
+  SpeechSynthesisResult
+} from '../../../shared/speech-synthesis'
+import type {
   DictationContext,
   OpenAiCompatibleSpeechProvider,
   OpenAiCompatibleSpeechProviderSummary,
@@ -46,6 +50,10 @@ export type SpeechApi = {
     requestId: string
   ) => Promise<DictationCleanupResult>
   cancelDictationCleanup?: (requestId: string) => Promise<void>
+  /** One spoken line from OpenAI's speech API, with the key saved for dictation. Absent in the
+   *  web client. */
+  synthesizeSpeech?: (request: SpeechSynthesisRequest) => Promise<SpeechSynthesisResult>
+  cancelSpeechSynthesis?: (requestId: string) => Promise<void>
   onPartialTranscript: (callback: (data: SpeechTranscriptEvent) => void) => () => void
   onFinalTranscript: (callback: (data: SpeechTranscriptEvent) => void) => () => void
   onSpeechPending: (callback: (data: SpeechPendingEvent) => void) => () => void

@@ -23,7 +23,11 @@ function installVoices(names: readonly [string, string][]): void {
   })
 }
 
-function render(spokenReplies: boolean, spokenReplyVoice?: string): () => React.JSX.Element {
+function render(
+  spokenReplies: boolean,
+  spokenReplyVoice?: string,
+  openAi?: { keyConfigured: boolean }
+): () => React.JSX.Element {
   return () => (
     // The settings page's own shell sets its row density.
     <div className="settings-view-shell p-4">
@@ -32,8 +36,15 @@ function render(spokenReplies: boolean, spokenReplyVoice?: string): () => React.
           voiceSettings={{
             ...getDefaultVoiceSettings(),
             spokenReplies,
-            ...(spokenReplyVoice ? { spokenReplyVoice } : {})
+            ...(spokenReplyVoice ? { spokenReplyVoice } : {}),
+            ...(openAi
+              ? {
+                  spokenReplyProvider: 'openai' as const,
+                  openAiApiKeyConfigured: openAi.keyConfigured
+                }
+              : {})
           }}
+          onAddOpenAiKey={() => {}}
           onUpdateVoiceSettings={() => {}}
         />
       </div>
@@ -62,3 +73,15 @@ export const noSystemVoice = defineFixture({
 })
 
 export const narrow = defineFixture({ width: 360, setup: withVoices, render: render(true) })
+
+export const openAiWithKey = defineFixture({
+  width: 720,
+  setup: withVoices,
+  render: render(true, undefined, { keyConfigured: true })
+})
+
+export const openAiWithoutKey = defineFixture({
+  width: 720,
+  setup: withVoices,
+  render: render(true, undefined, { keyConfigured: false })
+})

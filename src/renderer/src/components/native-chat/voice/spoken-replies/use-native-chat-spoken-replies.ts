@@ -6,6 +6,10 @@ import type { AgentType } from '../../../../../../shared/agent-status/contracts/
 import type { AgentJournalRenderItem } from '../../../../../../shared/agent-session/journal/agent-session-journal-types'
 import type { VoiceSettings } from '../../../../../../shared/speech-types'
 import {
+  DEFAULT_OPENAI_SPEECH_VOICE,
+  isOpenAiSpeechVoice
+} from '../../../../../../shared/speech-synthesis'
+import {
   speakablePhrase,
   speakableReply
 } from '../../../../../../shared/native-chat/spoken-replies/speakable-reply'
@@ -52,14 +56,27 @@ export function useNativeChatSpokenRepliesControl(): NativeChatSpokenReplies | n
 const cuesBySession = new Map<string, SpokenReplyCues>()
 
 export function spokenReplyVoiceFor(
-  voice: Pick<VoiceSettings, 'spokenReplyVoice' | 'dictationLanguage'> | undefined
+  voice:
+    | Pick<
+        VoiceSettings,
+        'spokenReplyVoice' | 'dictationLanguage' | 'spokenReplyProvider' | 'spokenReplyOpenAiVoice'
+      >
+    | undefined
 ): SpokenReplyVoicePick {
   const dictation = voice?.dictationLanguage
-  return pickSpokenReplyVoice(systemSpokenReplyVoices(), voice?.spokenReplyVoice, [
+  const pick = pickSpokenReplyVoice(systemSpokenReplyVoices(), voice?.spokenReplyVoice, [
     ...(dictation && dictation !== 'auto' ? [dictation] : []),
     i18n.language,
     navigator.language
   ])
+  if (voice?.spokenReplyProvider !== 'openai') {
+    return pick
+  }
+  const apiVoice = voice.spokenReplyOpenAiVoice
+  return {
+    ...pick,
+    api: { voice: isOpenAiSpeechVoice(apiVoice) ? apiVoice : DEFAULT_OPENAI_SPEECH_VOICE }
+  }
 }
 
 function spokenLines(cue: SpokenReplyCue, agent: string): string[] {
