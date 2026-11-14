@@ -11,7 +11,9 @@ export const useSpokenReplyMode = create<{
   handsFree: ChatSet
   /** The listening chat whose microphone stays closed until its composer is empty. */
   waitsForEmptyComposer: string | null
-}>(() => ({ on: {}, handsFree: {}, waitsForEmptyComposer: null }))
+  /** The chat whose own microphone is open on the reply it is reading, to be interrupted. */
+  overhearing: string | null
+}>(() => ({ on: {}, handsFree: {}, waitsForEmptyComposer: null, overhearing: null }))
 
 function withChat(chats: ChatSet, sessionId: string, member: boolean): ChatSet {
   const { [sessionId]: _was, ...others } = chats
@@ -54,6 +56,16 @@ export function setWaitsForEmptyComposer(sessionId: string, waits: boolean): voi
       ? { waitsForEmptyComposer: sessionId }
       : state.waitsForEmptyComposer === sessionId
         ? { waitsForEmptyComposer: null }
+        : state
+  )
+}
+
+export function setOverhearing(sessionId: string, overhearing: boolean): void {
+  useSpokenReplyMode.setState((state) =>
+    overhearing
+      ? { overhearing: sessionId }
+      : state.overhearing === sessionId
+        ? { overhearing: null }
         : state
   )
 }

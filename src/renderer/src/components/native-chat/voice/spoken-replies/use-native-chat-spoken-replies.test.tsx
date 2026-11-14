@@ -8,6 +8,7 @@ import { holdVoiceCallPresence } from '../voice-call-presence'
 import { NativeChatSpokenRepliesProvider } from './NativeChatSpokenRepliesProvider'
 import {
   setHandsFreeMode,
+  setOverhearing,
   setSpokenReplyMode,
   spokenReplyRequestedFor,
   useSpokenReplyMode
@@ -39,6 +40,8 @@ const system: { voices: FakeVoice[]; spoken: FakeUtterance[]; voicesListed: (() 
 vi.stubGlobal('SpeechSynthesisUtterance', function SpeechSynthesisUtterance(text: string) {
   return { text, voice: null, lang: '', onend: null, onerror: null }
 })
+// This host renders no voice of its own, so the system speaks directly.
+vi.stubGlobal('api', { speech: { renderSystemVoice: async () => null } })
 Object.defineProperty(window, 'speechSynthesis', {
   configurable: true,
   value: {
@@ -54,8 +57,12 @@ Object.defineProperty(window, 'speechSynthesis', {
   }
 })
 
+// The wrapper takes no props of its own, so the chat's visibility is read from here.
+const visible = { current: true }
+
 beforeEach(() => {
   vi.useFakeTimers()
+  visible.current = true
 })
 
 afterEach(() => {
@@ -66,6 +73,7 @@ afterEach(() => {
   system.voices = [LUCIANA]
   system.spoken = []
   setSpokenReplyMode('chat-1', false)
+  setOverhearing('chat-1', false)
   useAppStore.setState({ dictationState: 'idle', settings: null })
 })
 
@@ -92,7 +100,15 @@ function turn(itemId: string, state: 'running' | 'completed', reply?: string) {
   return items
 }
 
-function renderChat(isVisible = true) {
+/** Lets the host answer that it rendered nothing, after which the system speaks. */
+async function settle(run: () => void = () => {}): Promise<void> {
+  await act(async () => {
+    run()
+    await vi.advanceTimersByTimeAsync(0)
+  })
+}
+
+function renderChat() {
   useAppStore.setState({
     settings: {
       ...getDefaultSettings('/home/fixture'),
@@ -100,12 +116,12 @@ function renderChat(isVisible = true) {
     }
   })
   const chat = renderHook(
-    ({ items }: { items: AgentJournalRenderItem[]; isVisible: boolean }) => {
+    ({ items }: { items: AgentJournalRenderItem[] }) => {
       useSpokenReplyJournal(items)
       return useNativeChatSpokenRepliesControl()
     },
     {
-      initialProps: { items: NO_ITEMS, isVisible },
+      initialProps: { items: NO_ITEMS },
       wrapper: ({ children }) => (
         <NativeChatSpokenRepliesProvider
           pane={{ sessionId: 'chat-1', agent: 'claude', isVisible: visible.current }}
@@ -115,29 +131,27 @@ function renderChat(isVisible = true) {
       )
     }
   )
-  const answer = (turnId: string, reply: string): void => {
-    chat.rerender({ items: turn(turnId, 'running'), isVisible: visible.current })
-    chat.rerender({ items: turn(turnId, 'completed', reply), isVisible: visible.current })
+  const answer = async (turnId: string, reply: string): Promise<void> => {
+    chat.rerender({ items: turn(turnId, 'running') })
+    chat.rerender({ items: turn(turnId, 'completed', reply) })
+    await settle()
   }
   return { ...chat, answer }
 }
 
-// The wrapper takes no props of its own, so the chat's visibility is read from here.
-const visible = { current: true }
 const spokenTexts = (): string[] => system.spoken.map((utterance) => utterance.text)
 
-it('reads a finished reply in the chosen language, quiets on request, and stays silent during dictation', () => {
-  visible.current = true
+it('reads a finished reply in the chosen language, quiets on request, and stays silent during dictation', async () => {
   const { result, answer } = renderChat()
   expect(spokenReplyRequestedFor('chat-1')).toBe(false)
   act(() => result.current?.toggle())
   expect(spokenReplyRequestedFor('chat-1')).toBe(true)
 
-  answer('t1', 'Tudo certo. **Os testes** passaram.\n\n```sh\npnpm test\n```')
+  await answer('t1', 'Tudo certo. **Os testes** passaram.\n\n```sh\npnpm test\n```')
   expect(spokenTexts()).toEqual(['Tudo certo.'])
   expect(system.spoken[0]).toMatchObject({ voice: LUCIANA, lang: 'pt-BR' })
   expect(result.current?.line).toBe('Tudo certo.')
-  act(() => system.spoken[0].onend?.())
+  await settle(() => system.spoken[0].onend?.())
   expect(spokenTexts()).toEqual(['Tudo certo.', 'Os testes passaram.'])
 
   act(() => result.current?.silence())
@@ -145,54 +159,66 @@ it('reads a finished reply in the chosen language, quiets on request, and stays 
   expect(result.current?.on).toBe(true)
 
   act(() => useAppStore.setState({ dictationState: 'listening' }))
-  answer('t2', 'Segunda resposta.')
+  await answer('t2', 'Segunda resposta.')
   expect(spokenTexts()).toHaveLength(2)
 })
 
-it('counts a reply that waits for the system voices as speech, and drops it when the mode goes off', () => {
-  visible.current = true
+it('counts a reply that waits for the system voices as speech, and drops it when the mode goes off', async () => {
   system.voices = []
   const { result, answer } = renderChat()
   act(() => result.current?.toggle())
-  answer('t1', 'Pronto.')
+  await answer('t1', 'Pronto.')
   expect(spokenTexts()).toEqual([])
   // Hands-free reads this line to keep the microphone closed.
   expect(result.current?.line).toBe('Pronto.')
   system.voices = [LUCIANA]
-  act(() => system.voicesListed?.())
+  await settle(() => system.voicesListed?.())
   expect(system.spoken).toMatchObject([{ text: 'Pronto.', voice: LUCIANA, lang: 'pt-BR' }])
 
   system.voices = []
-  act(() => system.spoken[0].onend?.())
-  answer('t2', 'Tarde demais.')
+  await settle(() => system.spoken[0].onend?.())
+  await answer('t2', 'Tarde demais.')
   expect(result.current?.line).toBe('Tarde demais.')
   act(() => result.current?.toggle())
   system.voices = [LUCIANA]
-  act(() => system.voicesListed?.())
+  await settle(() => system.voicesListed?.())
   expect(spokenTexts()).toEqual(['Pronto.'])
 })
 
-it('stays silent while a Voice mode call in any chat holds the microphone', () => {
-  visible.current = true
+it('stays silent while a Voice mode call in any chat holds the microphone', async () => {
   const { result, answer } = renderChat()
   act(() => result.current?.toggle())
   let release = (): void => {}
   act(() => {
     release = holdVoiceCallPresence()
   })
-  answer('t1', 'Dita durante a chamada.')
+  await answer('t1', 'Dita durante a chamada.')
   expect(spokenTexts()).toEqual([])
   act(() => release())
-  answer('t2', 'Dita depois da chamada.')
+  await answer('t2', 'Dita depois da chamada.')
   expect(spokenTexts()).toEqual(['Dita depois da chamada.'])
 })
 
-it('reads nothing for a chat that is not on screen', () => {
+it('reads nothing for a chat that is not on screen', async () => {
   visible.current = false
-  const { answer } = renderChat(false)
+  const { answer } = renderChat()
   act(() => setSpokenReplyMode('chat-1', true))
-  answer('t1', 'Ninguém vê este chat.')
+  await answer('t1', 'Ninguém vê este chat.')
   expect(spokenTexts()).toEqual([])
+})
+
+it('keeps reading while its own microphone is open to be talked over', async () => {
+  const { result, answer } = renderChat()
+  act(() => result.current?.toggle())
+  act(() => {
+    setOverhearing('chat-1', true)
+    useAppStore.setState({ dictationState: 'listening' })
+  })
+  await answer('t1', 'Pode me interromper.')
+  expect(spokenTexts()).toEqual(['Pode me interromper.'])
+  // Once the person has talked over it, the microphone is theirs and replies stay quiet.
+  act(() => setOverhearing('chat-1', false))
+  expect(result.current?.line).toBeNull()
 })
 
 it('lets one chat at a time listen for the person, and stops listening when replies go quiet', () => {

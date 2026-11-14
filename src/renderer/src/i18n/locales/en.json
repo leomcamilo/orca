@@ -22262,7 +22262,9 @@
           "voiceLabel": "Voice",
           "voiceDescription": "A voice installed on this computer. Automatic follows your dictation or app language.",
           "sampleText": "This is how replies will sound.",
-          "automaticVoice": "Automatic"
+          "automaticVoice": "Automatic",
+          "interruptLabel": "Interrupt by talking",
+          "interruptDescription": "While a chat listens for your turn, keeps the microphone open as a reply is read and quiets the reply when you talk over it. The agent keeps working. On macOS only. Use headphones if the voice interrupts itself."
         }
       },
       "repositoryHooks": {

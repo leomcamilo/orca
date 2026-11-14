@@ -152,6 +152,9 @@ export type VoiceSettings = {
   spokenReplies?: boolean
   /** The system voice that reads replies, by its URI. Absent, or a voice the system no longer has = one chosen by language. */
   spokenReplyVoice?: string
+  /** While a chat listens for the person's turn, talking over a reply being read quiets it.
+   *  Only where the reply plays through the app's own audio. Absent = off. */
+  spokenReplyInterrupt?: boolean
 }
 
 /** Where a dictation goes: an engine in the desktop's own process takes repoTerms, a host resolves worktreeId itself. */
