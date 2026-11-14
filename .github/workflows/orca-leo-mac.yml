@@ -1,6 +1,7 @@
 # Orca Leo, Leo's personal build of Orca. Runs only for an orca-leo-* tag pushed to leomcamilo/orca,
 # never per commit. No secrets: ad-hoc signed, not notarized, never published as a release.
-# orca-leo-v<version> verifies and builds; orca-leo-check-<label> only verifies.
+# orca-leo-v<version> verifies and builds; orca-leo-check-<label> only verifies. Leo set the budget:
+# a run in 13 minutes at most, with 700 unit tests at most.
 name: Orca Leo mac build
 
 on:
@@ -15,11 +16,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The gate runs as two jobs beside the build, so a run takes as long as its slowest job instead of
+  # the sum. A build is accepted only when the whole run succeeds; receber-build.sh checks that.
   verify:
-    name: changed-code gate against upstream main
+    name: static checks against upstream main
     if: github.repository == 'leomcamilo/orca'
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 120
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -44,23 +47,19 @@ jobs:
 
       - uses: ./.github/actions/install-mobile-dependencies
 
-      # The gate runs the real-shell tests too; upstream's lane for them installs zsh the same way.
-      - name: Install zsh
-        run: bash .github/scripts/install-ubuntu-apt-packages.sh zsh
-
-      - name: Run the changed-code gate
+      - name: Run the changed-code gate without its unit tests
         shell: bash
+        env:
+          ORCA_GATE_UNIT_TESTS: elsewhere
         run: |
           set -euo pipefail
-          # Upstream release tags too: the cross-version tests check out v1.4.x builds.
-          git fetch --tags https://github.com/stablyai/orca.git main
+          git fetch --no-tags https://github.com/stablyai/orca.git main
           base="$(git merge-base FETCH_HEAD HEAD)"
           echo "upstream base $base, head $(git rev-parse HEAD)"
           mkdir -p gate-logs
           node config/scripts/preflight/changed-checks/check-changed.mjs --base="$base" --force \
             --maxWorkers=3 2>&1 | tee gate-logs/gate.log
 
-      # The gate prints the end of a failing step; a "[k/N]" beside each failure gives the total.
       - name: Keep the gate's output
         if: always()
         uses: actions/upload-artifact@v7
@@ -70,9 +69,46 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  unit-tests:
+    name: unit tests nearest the change (700 at most)
+    if: github.repository == 'leomcamilo/orca'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: ./.github/actions/install-node-dependencies
+        with:
+          native-runtime: node
+          node-version: '24'
+
+      - name: Run the budgeted unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags https://github.com/stablyai/orca.git main
+          base="$(git merge-base FETCH_HEAD HEAD)"
+          mkdir -p gate-logs
+          node config/scripts/workspace-package-build/build-workspace-packages.mjs
+          node config/scripts/native-build/node-addons/ensure-native-runtime.mjs --runtime=node
+          node config/orca-leo/unit-test-budget.mjs --base="$base" --budget=700 --maxWorkers=3 \
+            2>&1 | tee gate-logs/unit-tests.log
+
+      - name: Keep the unit tests' output
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: orca-leo-unit-tests-${{ github.ref_name }}
+          path: gate-logs
+          retention-days: 14
+          if-no-files-found: ignore
+
   build:
     name: package Orca Leo (arm64, ad-hoc)
-    needs: [verify]
     if: github.repository == 'leomcamilo/orca' && startsWith(github.ref_name, 'orca-leo-v')
     runs-on: macos-15
     timeout-minutes: 90

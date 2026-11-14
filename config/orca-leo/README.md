@@ -68,10 +68,16 @@ Os builds anteriores usavam os nomes `leo-voice` e `Orca Voice`. As tags `leo-vo
    apoia. Ela empilha o modo Voz, as respostas faladas e um commit de distribuição.
 2. Uma tag `orca-leo-v<versão>` nessa branch dispara o workflow. A versão segue `X.Y.Z-leo.N`, com
    `X.Y.Z` igual à versão do Orca oficial instalada.
-3. O workflow roda o `check:changed` do repositório contra a base do Orca oficial. Só depois
-   empacota para Mac com Apple Silicon. A saída da verificação fica guardada como artefato
-   `orca-leo-gate-<tag>`. Ela traz o fim de cada etapa que falhou; ao lado de cada teste com falha
-   aparece `[k/N]`, e `N` é o total.
+3. O workflow roda três jobs em paralelo, e o build só é aceito se os três passarem:
+   - as verificações do `check:changed` do repositório contra a base do Orca oficial (typecheck,
+     lint, formatação, padrões e localização), sem os testes unitários;
+   - no máximo 700 testes unitários, os mais próximos da mudança: primeiro os testes alterados,
+     depois os vizinhos de cada arquivo alterado, depois os demais testes das mesmas pastas
+     (`config/orca-leo/unit-test-budget.mjs`). Os que ficam de fora são listados no log;
+   - o empacotamento para Mac com Apple Silicon.
+     O teto de tempo pedido pelo Leo é 13 minutos por run. O `check:changed` completo, que roda os
+     testes relacionados pelo grafo de imports, fica para quando a mudança tocar a base inteira, como
+     numa sincronização com o Orca oficial.
 4. O resultado é um zip com `Orca Leo.app`, com assinatura ad-hoc e sem notarização, e o hash
    SHA-256 ao lado.
 
