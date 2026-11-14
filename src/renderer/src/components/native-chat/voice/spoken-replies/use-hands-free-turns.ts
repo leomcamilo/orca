@@ -9,7 +9,7 @@ import { isDictationUnderway } from '../../../../../../shared/dictation-session-
 import { useVoiceCallPresence } from '../voice-call-presence'
 import { HANDS_FREE_NO_SPEECH_MS, HandsFreeTurns } from './hands-free-turns'
 import { setOverhearing, setWaitsForEmptyComposer } from './spoken-reply-mode'
-import { spokenReplyPlaysThroughApp } from './spoken-reply-system-voice'
+import { useSpokenReplyLine } from './spoken-reply-system-voice'
 import type { NativeChatSpokenReplies } from './use-native-chat-spoken-replies'
 
 export type NativeChatHandsFreeComposer = {
@@ -39,6 +39,8 @@ export function useHandsFreeTurns(
   // A Voice mode call in any chat already holds the microphone.
   const inCall = useVoiceCallPresence((state) => state.calls > 0)
   const interrupts = useAppStore((store) => store.settings?.voice?.spokenReplyInterrupt === true)
+  // A push, like every other fact: the turn must hear of the reply starting to play.
+  const voiceCancelsEcho = useSpokenReplyLine((state) => state.throughApp) && interrupts
   const voiceSpeaking = spoken.line !== null
   const canSend = composer.canSend && !composer.dictationUnavailable && !inCall
   const turns = useRef<HandsFreeTurns | null>(null)
@@ -52,26 +54,20 @@ export function useHandsFreeTurns(
       userSpeaking,
       agentWorking: composer.agentWorking,
       voiceSpeaking,
-      voiceCancelsEcho: interrupts && spokenReplyPlaysThroughApp(),
+      voiceCancelsEcho,
       canSend,
       hasDraft: composer.hasDraft,
       now: Date.now()
     })
-    if (!voiceSpeaking) {
-      setOverhearing(spoken.sessionId, false)
-    }
-    if (action === 'open-microphone') {
-      composer.onOpenMicrophone()
-    } else if (action === 'overhear') {
-      // Marked first: an open microphone quiets a reply unless it is this chat's own.
-      setOverhearing(spoken.sessionId, true)
+    // Before the microphone opens: an open microphone quiets a reply unless it is the chat's
+    // own, listening for the person to talk over it. Read from the turn, so it cannot outlast it.
+    setOverhearing(spoken.sessionId, turns.current?.overhears() === true)
+    if (action === 'open-microphone' || action === 'overhear') {
       composer.onOpenMicrophone()
     } else if (action === 'interrupt-voice') {
-      setOverhearing(spoken.sessionId, false)
       spoken.silence()
     } else if (action === 'stop-overhearing') {
       dispatchDictationControl('cancel')
-      setOverhearing(spoken.sessionId, false)
     } else if (action === 'send') {
       composer.onSend()
     } else if (action === 'close-unused') {
@@ -146,6 +142,7 @@ export function useHandsFreeTurns(
     composer.agentWorking,
     composer.hasDraft,
     voiceSpeaking,
+    voiceCancelsEcho,
     canSend,
     woken
   ])

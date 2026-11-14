@@ -113,7 +113,12 @@ export class HandsFreeTurns {
 
   /** The microphone is open, or opening, because this turn asked for it. */
   holdsMicrophone(): boolean {
-    return this.phase.name === 'opening' || this.phase.name === 'listening'
+    return this.phase.name !== 'resting' && this.phase.name !== 'sent'
+  }
+
+  /** The microphone is open on the reply being read, to hear the person talk over it. */
+  overhears(): boolean {
+    return this.phase.name === 'overhearing'
   }
 
   /** Only the draft in the composer keeps the microphone from opening. */
@@ -139,7 +144,8 @@ export class HandsFreeTurns {
         facts.voiceSpeaking &&
         facts.voiceCancelsEcho &&
         facts.dictation === 'idle' &&
-        facts.canSend
+        facts.canSend &&
+        !facts.hasDraft
       ) {
         this.phase = { name: 'overhearing', speechSince: null }
         return 'overhear'

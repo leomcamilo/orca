@@ -12,6 +12,7 @@ const PICK = { voice: LUCIANA, language: 'pt-BR' }
 
 function rig(rendered: Uint8Array | null | 'fails') {
   const events: string[] = []
+  const throughApp: boolean[] = []
   let endSound = (): void => {}
   let answerRender = (): void => {}
   const voice = createAppVoiceSynthesizer({
@@ -33,18 +34,19 @@ function rig(rendered: Uint8Array | null | 'fails') {
         endSound = onDone
       },
       cancel: () => events.push('system cancels')
-    }
+    },
+    onPlaying: (playing) => throughApp.push(playing)
   })
   const settle = async (): Promise<void> => {
     answerRender()
     await new Promise((resolve) => setTimeout(resolve, 0))
   }
-  return { voice, events, settle, endSound: () => endSound() }
+  return { voice, events, throughApp, settle, endSound: () => endSound() }
 }
 
 describe('createAppVoiceSynthesizer', () => {
   it('plays the rendered system voice through the app and reports its end once', async () => {
-    const { voice, events, settle, endSound } = rig(new Uint8Array([1]))
+    const { voice, events, throughApp, settle, endSound } = rig(new Uint8Array([1]))
     let done = 0
     voice.speak('Tudo certo.', PICK, () => (done += 1))
     await settle()
@@ -52,20 +54,20 @@ describe('createAppVoiceSynthesizer', () => {
       'render com.apple.voice.compact.pt-BR.Luciana: Tudo certo.',
       'app plays'
     ])
-    expect(voice.playsThroughApp()).toBe(true)
+    expect(throughApp).toEqual([true])
     endSound()
     endSound()
     expect(done).toBe(1)
-    expect(voice.playsThroughApp()).toBe(false)
+    expect(throughApp).toEqual([true, false])
   })
 
   it('has the system speak when the host renders nothing or the render fails', async () => {
     for (const rendered of [null, 'fails'] as const) {
-      const { voice, events, settle } = rig(rendered)
+      const { voice, events, throughApp, settle } = rig(rendered)
       voice.speak('Oi.', PICK, () => {})
       await settle()
       expect(events.at(-1)).toBe('system speaks: Oi.')
-      expect(voice.playsThroughApp()).toBe(false)
+      expect(throughApp).toEqual([])
     }
   })
 

@@ -8,7 +8,9 @@ import {
 } from '@/components/dictation/dictation-meter-store'
 import type { NativeChatSpokenReplies } from './use-native-chat-spoken-replies'
 import { DICTATION_CONTROL_EVENT } from '@/components/dictation/dictation-control-events'
+import { getDefaultSettings, getDefaultVoiceSettings } from '../../../../../../shared/constants'
 import { useSpokenReplyMode } from './spoken-reply-mode'
+import { useSpokenReplyLine } from './spoken-reply-system-voice'
 import { useHandsFreeTurns } from './use-hands-free-turns'
 
 // Stands in for the dictation controller, which knows where a dictation lands.
@@ -37,7 +39,8 @@ afterEach(() => {
   document.removeEventListener(DICTATION_CONTROL_EVENT, recordControl)
   vi.useRealTimers()
   resetDictationMeter()
-  useAppStore.setState({ dictationState: 'idle' })
+  useAppStore.setState({ dictationState: 'idle', settings: null })
+  useSpokenReplyLine.setState({ line: null, throughApp: false })
 })
 
 type Chat = { line: string | null; agentWorking: boolean; handsFree?: boolean; hasDraft?: boolean }
@@ -56,7 +59,7 @@ function listenForTurns() {
     waitsForEmptyComposer: false,
     toggle: () => {},
     setHandsFree: (handsFree) => events.push(handsFree ? 'armed' : 'disarmed'),
-    silence: () => {}
+    silence: () => events.push('reply quieted')
   })
   const chat = renderHook(
     ({ line, agentWorking, handsFree = true, hasDraft = false }: Chat) =>
@@ -242,4 +245,75 @@ it('opens the microphone on an empty composer only, and says so while a draft is
   expect(useSpokenReplyMode.getState().waitsForEmptyComposer).toBeNull()
   wait(600)
   expect(events).toEqual(['open microphone'])
+})
+
+function interruptByTalking(): void {
+  useAppStore.setState({
+    settings: {
+      ...getDefaultSettings('/home/fixture'),
+      voice: { ...getDefaultVoiceSettings(), spokenReplyInterrupt: true }
+    }
+  })
+}
+const playsThroughApp = (throughApp: boolean): void =>
+  act(() => useSpokenReplyLine.setState({ throughApp }))
+const READING: Chat = { line: 'Pronto.', agentWorking: false }
+
+it('opens on a reply once it plays through the app, and quiets it when the person talks over it', () => {
+  interruptByTalking()
+  const { events, rerender, speak, dictationIs, wait } = listenForTurns()
+  rerender(READING)
+  // Still being rendered: nothing the microphone could tell from the person yet.
+  wait(2000)
+  expect(events).toEqual([])
+  playsThroughApp(true)
+  expect(events).toEqual(['open microphone'])
+  expect(useSpokenReplyMode.getState().overhearing).toBe('chat-1')
+
+  dictationIs('listening')
+  speak(true)
+  wait(399)
+  expect(events).toEqual(['open microphone'])
+  wait(1)
+  expect(events).toEqual(['open microphone', 'reply quieted'])
+  expect(useSpokenReplyMode.getState().overhearing).toBeNull()
+  // Their turn has begun: what they say goes out after the pause, and nothing was cancelled.
+  rerender(STARTING)
+  speak(false)
+  wait(1400)
+  expect(events).toEqual(['open microphone', 'reply quieted', 'send'])
+  expect(controls).toEqual([])
+})
+
+it('drops what the microphone took in when the reply ends untouched, and stops overhearing for another dictation', () => {
+  interruptByTalking()
+  const untouched = listenForTurns()
+  untouched.rerender(READING)
+  playsThroughApp(true)
+  untouched.dictationIs('listening')
+  untouched.rerender(STARTING)
+  expect(controls).toEqual(['cancel'])
+  expect(useSpokenReplyMode.getState().overhearing).toBeNull()
+  untouched.unmount()
+
+  controls.length = 0
+  useAppStore.setState({ dictationState: 'idle' })
+  const taken = listenForTurns()
+  taken.rerender(READING)
+  playsThroughApp(false)
+  playsThroughApp(true)
+  expect(useSpokenReplyMode.getState().overhearing).toBe('chat-1')
+  // A dictation the person started elsewhere takes the microphone while the reply plays.
+  dictation.landsHere = false
+  taken.dictationIs('listening')
+  expect(useSpokenReplyMode.getState().overhearing).toBeNull()
+  expect(controls).toEqual([])
+})
+
+it('keeps the microphone closed on a reply while interrupting by talking is off', () => {
+  const { events, rerender, wait } = listenForTurns()
+  rerender(READING)
+  playsThroughApp(true)
+  wait(5000)
+  expect(events).toEqual([])
 })

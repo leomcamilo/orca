@@ -7,22 +7,25 @@ export type AppVoiceAudio = {
   play: (wav: Uint8Array, onEnded: () => void) => Promise<{ stop: () => void }>
 }
 
-export type AppVoiceSynthesizer = SpokenReplySynthesizer & {
-  /** A line is playing through the app's own audio, which the microphone capture cancels as
-   *  echo. False while the system speaks directly, which it cannot cancel. */
-  playsThroughApp: () => boolean
-}
-
 /** Speaks through the app's own audio output where the host can render the system voice to
  *  sound (macOS), and has the system speak directly everywhere else or whenever that fails. */
 export function createAppVoiceSynthesizer(deps: {
   render: (request: SystemVoiceRenderRequest) => Promise<Uint8Array | null>
   audio: AppVoiceAudio
   system: SpokenReplySynthesizer
-}): AppVoiceSynthesizer {
+  /** Told when a line starts and stops playing through the app's own audio, which the microphone
+   *  capture cancels as echo. Never told so while the system speaks directly. */
+  onPlaying?: (playing: boolean) => void
+}): SpokenReplySynthesizer {
   // Each speak and each cancel moves this on, so a render that answers late knows it is stale.
   let generation = 0
   let playing: { stop: () => void } | null = null
+  const setPlaying = (sound: { stop: () => void } | null): void => {
+    if ((playing === null) !== (sound === null)) {
+      deps.onPlaying?.(sound !== null)
+    }
+    playing = sound
+  }
   let finish: (() => void) | null = null
   // Renders asked for ahead of their line, so one sentence follows another without a gap.
   const rendering = new Map<string, Promise<Uint8Array | null>>()
@@ -49,7 +52,7 @@ export function createAppVoiceSynthesizer(deps: {
       if (!done) {
         done = true
         if (generation === mine) {
-          playing = null
+          setPlaying(null)
           finish = null
         }
         onDone()
@@ -72,7 +75,7 @@ export function createAppVoiceSynthesizer(deps: {
         }
         const sound = await deps.audio.play(wav, end)
         if (generation === mine && !done) {
-          playing = sound
+          setPlaying(sound)
         } else {
           sound.stop()
         }
@@ -99,13 +102,12 @@ export function createAppVoiceSynthesizer(deps: {
       rendering.clear()
       generation += 1
       playing?.stop()
-      playing = null
+      setPlaying(null)
       deps.system.cancel()
       // A line still being rendered has no sound to stop; it ends here.
       finish?.()
       finish = null
-    },
-    playsThroughApp: () => playing !== null
+    }
   }
 }
 

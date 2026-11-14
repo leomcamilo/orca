@@ -1,9 +1,5 @@
 import { create } from 'zustand'
-import {
-  appVoiceAudio,
-  createAppVoiceSynthesizer,
-  type AppVoiceSynthesizer
-} from './spoken-reply-app-voice'
+import { appVoiceAudio, createAppVoiceSynthesizer } from './spoken-reply-app-voice'
 import {
   SpokenReplySpeech,
   type SpokenReplyLine,
@@ -11,8 +7,12 @@ import {
   type SpokenReplyVoice
 } from './spoken-reply-speech'
 
-/** The line being spoken, for the strip of the chat that owns it. */
-export const useSpokenReplyLine = create<{ line: SpokenReplyLine | null }>(() => ({ line: null }))
+/** The line being spoken, for the strip of the chat that owns it, and whether it is playing
+ *  through the app's own audio: sound the microphone capture cancels as echo, which the system
+ *  speaking directly is not. */
+export const useSpokenReplyLine = create<{ line: SpokenReplyLine | null; throughApp: boolean }>(
+  () => ({ line: null, throughApp: false })
+)
 
 function systemSynthesis(): SpeechSynthesis | null {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
@@ -91,21 +91,14 @@ function whenSystemVoicesListed(synthesis: SpeechSynthesis, speak: () => void): 
   setTimeout(run, VOICES_WAIT_MS)
 }
 
-let appVoiceSynthesizer: AppVoiceSynthesizer | null = null
-
-function appVoice(synthesis: SpeechSynthesis): AppVoiceSynthesizer {
-  appVoiceSynthesizer = createAppVoiceSynthesizer({
+function appVoice(synthesis: SpeechSynthesis): SpokenReplySynthesizer {
+  return createAppVoiceSynthesizer({
     // Absent in the web client and on a host that predates it: the system speaks directly.
     render: async (request) => (await window.api.speech.renderSystemVoice?.(request)) ?? null,
     audio: appVoiceAudio,
-    system: systemSynthesizer(synthesis)
+    system: systemSynthesizer(synthesis),
+    onPlaying: (throughApp) => useSpokenReplyLine.setState({ throughApp })
   })
-  return appVoiceSynthesizer
-}
-
-/** The line being read is playing through the app's own audio. */
-export function spokenReplyPlaysThroughApp(): boolean {
-  return appVoiceSynthesizer?.playsThroughApp() === true
 }
 
 let speech: SpokenReplySpeech | null | undefined
