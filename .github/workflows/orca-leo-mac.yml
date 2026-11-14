@@ -53,8 +53,11 @@ jobs:
           ORCA_GATE_UNIT_TESTS: elsewhere
         run: |
           set -euo pipefail
-          git fetch --no-tags https://github.com/stablyai/orca.git main
+          git fetch --tags https://github.com/stablyai/orca.git main
           base="$(git merge-base FETCH_HEAD HEAD)"
+          # Release tags let the cross-version tests check out shipped builds. A release cut after this
+          # base is newer than the code under test, so it is no downgrade case; keep only older ones.
+          git tag -l 'v[0-9]*' --contains "$base" | xargs -r git tag -d >/dev/null
           echo "upstream base $base, head $(git rev-parse HEAD)"
           mkdir -p gate-logs
           node config/scripts/preflight/changed-checks/check-changed.mjs --base="$base" --force \
@@ -90,8 +93,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags https://github.com/stablyai/orca.git main
+          git fetch --tags https://github.com/stablyai/orca.git main
           base="$(git merge-base FETCH_HEAD HEAD)"
+          # Release tags let the cross-version tests check out shipped builds. A release cut after this
+          # base is newer than the code under test, so it is no downgrade case; keep only older ones.
+          git tag -l 'v[0-9]*' --contains "$base" | xargs -r git tag -d >/dev/null
           mkdir -p gate-logs
           node config/scripts/workspace-package-build/build-workspace-packages.mjs
           node config/scripts/native-build/node-addons/ensure-native-runtime.mjs --runtime=node
