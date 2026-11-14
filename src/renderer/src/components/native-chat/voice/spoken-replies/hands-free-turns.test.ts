@@ -19,16 +19,23 @@ describe('HandsFreeTurns', () => {
     expect(turns.next({ ...quiet, now: 100 })).toBeNull()
     expect(turns.next({ ...quiet, now: 700 })).toBe('open-microphone')
     expect(turns.next({ ...mine, now: 900 })).toBeNull()
+    // Speech is reported when it starts and when it stops, however long it lasts.
     expect(turns.next({ ...mine, userSpeaking: true, now: 2000 })).toBeNull()
-    // A pause shorter than the end of speech keeps listening.
-    expect(turns.next({ ...mine, now: 3000 })).toBeNull()
-    expect(turns.next({ ...mine, now: 3400 })).toBe('send')
+    expect(turns.deadline()).toBeNull()
+    expect(turns.next({ ...mine, now: 9000 })).toBeNull()
+    // The pause counts from where the speech stopped.
+    expect(turns.deadline()).toBe(10_400)
+    expect(turns.next({ ...mine, now: 10_300 })).toBeNull()
+    expect(turns.next({ ...mine, now: 10_400 })).toBe('send')
 
-    expect(turns.next({ ...quiet, dictation: 'stopping', now: 3500 })).toBeNull()
-    expect(turns.next({ ...quiet, agentWorking: true, now: 4000 })).toBeNull()
-    expect(turns.next({ ...quiet, agentWorking: true, now: 60_000 })).toBeNull()
+    expect(turns.next({ ...quiet, dictation: 'stopping', now: 10_500 })).toBeNull()
+    expect(turns.next({ ...quiet, agentWorking: true, now: 11_000 })).toBeNull()
+    // While the agent works or speaks, only a change moves the turn: nothing is timed.
+    expect(turns.deadline()).toBeNull()
     expect(turns.next({ ...quiet, voiceSpeaking: true, now: 61_000 })).toBeNull()
+    expect(turns.deadline()).toBeNull()
     expect(turns.next({ ...quiet, now: 65_000 })).toBeNull()
+    expect(turns.deadline()).toBe(65_600)
     expect(turns.next({ ...quiet, now: 65_600 })).toBe('open-microphone')
   })
 
@@ -79,6 +86,7 @@ describe('HandsFreeTurns', () => {
       expect(noisy.next({ ...quiet, now: (now += 600) })).toBe('open-microphone')
       noisy.next({ ...mine, now: (now += 100) })
       noisy.next({ ...mine, userSpeaking: true, now: (now += 100) })
+      noisy.next({ ...mine, now: (now += 100) })
       expect(noisy.next({ ...mine, now: (now += 1400) })).toBe('send')
       // Nothing was sent, so the agent never starts working.
       return noisy.next({ ...quiet, now: (now += 4000) })
