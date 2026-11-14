@@ -23,7 +23,7 @@ import { configureMacShipItScheduling } from '../mac-install/macos-shipit-schedu
 import { handleElectronUpdaterProxyLogin } from './electron-updater-proxy-session'
 import { resolveWindowsUpdateInstallDirectory } from './windows-update-install-directory'
 import type { PreQuitCleanupFailureMode, UpdateInstallMode } from './updater-state'
-import { ORCA_LEO_DISTRIBUTION } from '../../orca-leo/orca-leo-distribution'
+import { ORCA_LEO_DISTRIBUTION } from '../../../shared/orca-leo/orca-leo-distribution'
 
 export type UpdaterSetupOptions = {
   getMainWindow?: () => BrowserWindow | null
