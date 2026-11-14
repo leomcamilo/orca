@@ -15,7 +15,7 @@ import { ReleaseBuildListCache, type ReleaseBuildListOptions } from './updater-r
 import { UpdaterMenuChecks } from '../lifecycle/updater-menu-checks'
 import { updaterCodedMessage } from '../../../shared/updater-failure-copy'
 import { updaterErrorMessage } from '../lifecycle/updater-coded-error'
-import { ORCA_LEO_DISTRIBUTION } from '../../orca-leo/orca-leo-distribution'
+import { ORCA_LEO_DISTRIBUTION } from '../../../shared/orca-leo/orca-leo-distribution'
 
 export abstract class UpdaterBuildSelection extends UpdaterMenuChecks {
   private readonly releaseBuildCache = new ReleaseBuildListCache((channel) =>
