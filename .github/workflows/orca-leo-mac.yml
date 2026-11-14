@@ -45,13 +45,40 @@ jobs:
       - uses: ./.github/actions/install-mobile-dependencies
 
       - name: Run the changed-code gate
+        id: gate
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags https://github.com/stablyai/orca.git main
+          # Upstream release tags too: the cross-version tests check out v1.4.x builds.
+          git fetch --tags https://github.com/stablyai/orca.git main
           base="$(git merge-base FETCH_HEAD HEAD)"
+          echo "base=$base" >>"$GITHUB_OUTPUT"
           echo "upstream base $base, head $(git rev-parse HEAD)"
-          node config/scripts/preflight/changed-checks/check-changed.mjs --base="$base" --force --maxWorkers=3
+          mkdir -p gate-logs
+          node config/scripts/preflight/changed-checks/check-changed.mjs --base="$base" --force \
+            --maxWorkers=3 2>&1 | tee gate-logs/gate.log
+
+      # The gate prints only the end of a failing step, so run the tests again for the whole list.
+      - name: Record every failing unit test
+        if: failure() && steps.gate.outputs.base != ''
+        shell: bash
+        env:
+          BASE: ${{ steps.gate.outputs.base }}
+        run: |
+          grep -q '✗ unit tests' gate-logs/gate.log || exit 0
+          node config/scripts/test-runtime/execution-policy/run-vitest.mjs run \
+            --config config/vitest.config.ts --changed="$BASE" --maxWorkers=3 \
+            >gate-logs/unit-tests.log 2>&1 || true
+          grep -E '^ *(FAIL|Test Files|Tests) ' gate-logs/unit-tests.log | sort -u | tail -80
+
+      - name: Keep the gate's output
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: orca-leo-gate-${{ github.ref_name }}
+          path: gate-logs
+          retention-days: 14
+          if-no-files-found: ignore
 
   build:
     name: package Orca Leo (arm64, ad-hoc)
