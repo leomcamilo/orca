@@ -86,33 +86,39 @@ export function createSpokenReplySynthesis(deps: {
     if (!valid) {
       return { ok: false, failure: 'refused', message: 'Invalid speech request' }
     }
-    // Counted when sent: a request cut short may still be billed.
-    const reserved = await deps.usage
-      .reserve(valid.provider, valid.text.length, deps.monthlyLimit())
-      // A usage file that cannot be written must not leave a paid service unlimited.
-      .catch(() => (PAID_SPEECH_PROVIDERS.includes(valid.provider) ? 'unrecorded' : true))
-    if (reserved === 'unrecorded') {
-      return {
-        ok: false,
-        failure: 'refused',
-        message: 'The usage count could not be saved, so nothing was sent'
-      }
-    }
-    if (!reserved) {
-      return { ok: false, failure: 'over-limit' }
-    }
+    // Registered before the count, so a Quiet that arrives while it is written still stops it.
     const cancel = new AbortController()
     pending.get(valid.requestId)?.abort()
     pending.set(valid.requestId, cancel)
+    const stopped = (): boolean => cancel.signal.aborted || callerGone?.aborted === true
     const timeout = AbortSignal.timeout(SPEECH_TIMEOUT_MS)
     try {
+      // Counted when sent: a request cut short may still be billed.
+      const reserved = await deps.usage
+        .reserve(valid.provider, valid.text.length, deps.monthlyLimit())
+        // A usage file that cannot be written must not leave a paid service unlimited.
+        .catch(() => (PAID_SPEECH_PROVIDERS.includes(valid.provider) ? 'unrecorded' : true))
+      // Quieted during the count: nothing is sent. The line stays counted, erring toward the limit.
+      if (stopped()) {
+        return { ok: false, failure: 'cancelled' }
+      }
+      if (reserved === 'unrecorded') {
+        return {
+          ok: false,
+          failure: 'refused',
+          message: 'The usage count could not be saved, so nothing was sent'
+        }
+      }
+      if (!reserved) {
+        return { ok: false, failure: 'over-limit' }
+      }
       const result = await synthesizeWith(
         valid,
         AbortSignal.any([cancel.signal, timeout, ...(callerGone ? [callerGone] : [])])
       )
       return result
     } catch {
-      if (cancel.signal.aborted || callerGone?.aborted) {
+      if (stopped()) {
         return { ok: false, failure: 'cancelled' }
       }
       return { ok: false, failure: timeout.aborted ? 'timeout' : 'network' }

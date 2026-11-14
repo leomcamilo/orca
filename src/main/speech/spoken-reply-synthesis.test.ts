@@ -181,6 +181,26 @@ describe('createSpokenReplySynthesis', () => {
     expect(await synthesis().synthesize(REQUEST)).toMatchObject({ ok: false, failure: 'quota' })
   })
 
+  it('sends nothing for a line quieted while its usage is being counted', async () => {
+    const sent = answer(() => new Response(new Uint8Array([1])))
+    let counted = (_reserved: boolean): void => {}
+    const speech = createSpokenReplySynthesis({
+      usage: {
+        read: async () => ({ month: '2026-11', characters: {} }),
+        reserve: () =>
+          new Promise<boolean>((resolve) => {
+            counted = resolve
+          })
+      },
+      monthlyLimit: () => 20_000
+    })
+    const quieted = speech.synthesize(REQUEST)
+    speech.cancel('r1')
+    counted(true)
+    expect(await quieted).toEqual({ ok: false, failure: 'cancelled' })
+    expect(sent).toHaveLength(0)
+  })
+
   it('abandons a request still out when it is cancelled or its window goes away', async () => {
     const hang = ({ init }: Sent) =>
       new Promise<Response>((_resolve, reject) => {
