@@ -90,6 +90,18 @@ describe('createApiVoiceSynthesizer', () => {
     ])
   })
 
+  it('asks once ahead for a line a reply says twice, leaving no request unused', async () => {
+    const { voice, events, answer, endSound } = rig()
+    voice.prepare?.(['Pronto.', 'Pronto.'], OPENAI)
+    voice.speak('Pronto.', OPENAI, () => {})
+    await answer('Pronto.', SOUND)
+    endSound()
+    voice.speak('Pronto.', OPENAI, () => {})
+    await answer('Pronto.', SOUND)
+    expect(events.filter((event) => event.startsWith('ask'))).toHaveLength(2)
+    expect(events.filter((event) => event === 'app plays')).toHaveLength(2)
+  })
+
   it('leaves a line picked for the system voice to the system', () => {
     const { voice, events } = rig()
     voice.speak('Oi.', SYSTEM, () => {})

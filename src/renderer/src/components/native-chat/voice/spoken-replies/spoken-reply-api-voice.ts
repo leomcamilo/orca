@@ -63,7 +63,11 @@ export function createApiVoiceSynthesizer(deps: {
         return
       }
       for (const text of lines) {
-        asked.set(`${pick.api.voice}\n${text}`, ask(text, pick))
+        const key = `${pick.api.voice}\n${text}`
+        // A line said twice is asked for once here; its second reading asks again.
+        if (!asked.has(key)) {
+          asked.set(key, ask(text, pick))
+        }
       }
     },
     speak: (text, pick, onDone) => {
