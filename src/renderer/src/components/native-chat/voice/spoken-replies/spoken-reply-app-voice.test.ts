@@ -69,6 +69,13 @@ describe('createAppVoiceSynthesizer', () => {
     }
   })
 
+  it('leaves a line with no matching voice to the system, which is told the language', async () => {
+    const { voice, events, settle } = rig(new Uint8Array([1]))
+    voice.speak('Oi.', { voice: null, language: 'pt' }, () => {})
+    await settle()
+    expect(events).toEqual(['system speaks: Oi.'])
+  })
+
   it('ends a line cancelled while it renders, and never plays it', async () => {
     const { voice, events, settle } = rig(new Uint8Array([1]))
     let done = 0
