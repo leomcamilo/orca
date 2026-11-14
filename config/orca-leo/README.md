@@ -12,7 +12,8 @@ Ele é temporário. Quando o modo Voz entrar no Orca oficial, o plano é voltar 
 - Respostas lidas em voz alta e escuta por turnos nos chats Claude e OpenCode. Fica na branch
   `feat/native-chat-spoken-replies` e ainda não foi proposta ao Orca oficial.
 - Atualizador desligado. O Orca Leo só muda por um build novo; o canal oficial trocaria o app por um
-  sem o modo Voz.
+  sem o modo Voz. O desligamento vale só para um pacote com versão `X.Y.Z-leo.N`: o mesmo código,
+  rodando com outra versão ou nos testes, se comporta como o Orca oficial.
 
 O código próprio do Orca Leo é pequeno e fica em três lugares:
 
@@ -67,8 +68,9 @@ Os builds anteriores usavam os nomes `leo-voice` e `Orca Voice`. As tags `leo-vo
    apoia. Ela empilha o modo Voz, as respostas faladas e um commit de distribuição.
 2. Uma tag `orca-leo-v<versão>` nessa branch dispara o workflow. A versão segue `X.Y.Z-leo.N`, com
    `X.Y.Z` igual à versão do Orca oficial instalada.
-3. O workflow roda o `check:changed` do repositório contra a base do Orca oficial. Só depois empacota para Mac
-   com Apple Silicon.
+3. O workflow roda o `check:changed` do repositório contra a base do Orca oficial. Só depois
+   empacota para Mac com Apple Silicon. A saída da verificação fica guardada como artefato
+   `orca-leo-gate-<tag>`.
 4. O resultado é um zip com `Orca Leo.app`, com assinatura ad-hoc e sem notarização, e o hash
    SHA-256 ao lado.
 
