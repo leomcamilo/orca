@@ -1,4 +1,4 @@
-import type { OpenAiSpeechVoice } from '../../../../../../shared/speech-synthesis'
+import type { SpeechSynthesisProvider } from '../../../../../../shared/speech-synthesis'
 
 /** The slice of the Web Speech API the queue drives, so a test can stand in for the system voice. */
 export type SpokenReplyVoice = {
@@ -14,7 +14,7 @@ export type SpokenReplyVoice = {
 export type SpokenReplyVoicePick = {
   voice: SpokenReplyVoice | null
   language: string | null
-  api?: { voice: OpenAiSpeechVoice }
+  api?: { provider: SpeechSynthesisProvider; voice: string; model?: string }
 }
 
 export type SpokenReplySynthesizer = {

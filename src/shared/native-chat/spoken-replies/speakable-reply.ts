@@ -77,6 +77,11 @@ function lastPathPart(path: string): string {
   return path.split(/[\\/]/).findLast((part) => part.length > 0) ?? ''
 }
 
+// Message, session and task handles, UUIDs and commit hashes: on screen they are references, and
+// read aloud they are noise.
+const MACHINE_IDS =
+  /\b(?:msg|ctx|term|run|task|dispatch|structworker|req|wf)_[A-Za-z0-9-]+|\borca_session_id:\S+|\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b|\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b/g
+
 function plainWords(text: string): string {
   return (
     text
@@ -87,6 +92,7 @@ function plainWords(text: string): string {
       .replace(/`([^`]+)`/g, (_match, code: string) => spokenCode(code))
       // A path outside code reads as its last part; "and/or" has one slash and stays.
       .replace(/(?<![\w/.~-])[.~]?(?:\/?[\w.@~-]+\/){2,}[\w.@-]+/g, lastPathPart)
+      .replace(MACHINE_IDS, '')
       .replace(/<\/?[a-zA-Z][^>]*>/g, '')
       .replace(/\*\*|__|~~/g, '')
       .replace(/(^|[\s(])[*_]([^*_\n]+)[*_](?=[\s).,;:!?]|$)/g, '$1$2')

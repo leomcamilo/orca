@@ -6,7 +6,11 @@ import type {
 import { createApiVoiceSynthesizer } from './spoken-reply-api-voice'
 import type { SpokenReplyVoicePick } from './spoken-reply-speech'
 
-const OPENAI: SpokenReplyVoicePick = { voice: null, language: 'pt', api: { voice: 'marin' } }
+const OPENAI: SpokenReplyVoicePick = {
+  voice: null,
+  language: 'pt',
+  api: { provider: 'openai', voice: 'marin' }
+}
 const SYSTEM: SpokenReplyVoicePick = { voice: null, language: 'pt' }
 
 function rig() {

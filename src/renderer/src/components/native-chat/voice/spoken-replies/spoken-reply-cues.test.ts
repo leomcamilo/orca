@@ -64,4 +64,29 @@ describe('SpokenReplyCues', () => {
     ])
     expect(cues.take([open, approval('a1', 'resolved')])).toEqual([])
   })
+
+  it('stays silent for a turn another agent opened with a mail, and reads one the person opened', () => {
+    const cues = new SpokenReplyCues([])
+    const opener = (itemId: string, turnItemId: string, fromAgent: boolean) =>
+      row(
+        itemId,
+        {
+          kind: 'message',
+          role: 'user',
+          blocks: [{ type: 'text', text: 'Retorno da frente' }],
+          ...(fromAgent
+            ? { from: { kind: 'agent' as const, senders: [], orchestration: null } }
+            : {})
+        },
+        { turnScope: { kind: 'turn', turnItemId } }
+      )
+    cues.take([turn('t3', 'running'), opener('u3', 't3', true)])
+    expect(
+      cues.take([turn('t3', 'completed'), opener('u3', 't3', true), reply('m5', 't3', 'Anotado.')])
+    ).toEqual([])
+    cues.take([turn('t4', 'running'), opener('u4', 't4', false)])
+    expect(
+      cues.take([turn('t4', 'completed'), opener('u4', 't4', false), reply('m6', 't4', 'Feito.')])
+    ).toEqual([{ kind: 'reply', key: 't4', markdown: 'Feito.' }])
+  })
 })

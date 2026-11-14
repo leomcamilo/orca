@@ -1,8 +1,12 @@
 import type { SecretAtRestProtection } from '../../../shared/secret-at-rest-protection'
 import type { DictationCleanupResult } from '../../../shared/dictation-cleanup'
 import type {
+  ElevenLabsVoiceListing,
+  OpenAiCompatibleSpeechVoiceProvider,
+  OpenAiCompatibleSpeechVoiceProviderSummary,
   SpeechSynthesisRequest,
-  SpeechSynthesisResult
+  SpeechSynthesisResult,
+  SpeechSynthesisUsage
 } from '../../../shared/speech-synthesis'
 import { ipcRenderer } from 'electron'
 import type {
@@ -118,6 +122,32 @@ export const speechApi = {
 
   cancelSpeechSynthesis: (requestId: string): Promise<void> =>
     ipcRenderer.invoke('speech:cancelSpeechSynthesis', requestId),
+
+  getSpeechSynthesisUsage: (): Promise<SpeechSynthesisUsage> =>
+    ipcRenderer.invoke('speech:getSpeechSynthesisUsage'),
+
+  getElevenLabsKeyStatus: (): Promise<{ configured: boolean }> =>
+    ipcRenderer.invoke('speech:getElevenLabsKeyStatus'),
+
+  saveElevenLabsApiKey: (apiKey: string): Promise<{ configured: boolean }> =>
+    ipcRenderer.invoke('speech:saveElevenLabsApiKey', apiKey),
+
+  clearElevenLabsApiKey: (): Promise<{ configured: boolean }> =>
+    ipcRenderer.invoke('speech:clearElevenLabsApiKey'),
+
+  listElevenLabsVoices: (): Promise<ElevenLabsVoiceListing> =>
+    ipcRenderer.invoke('speech:listElevenLabsVoices'),
+
+  getOpenAiCompatibleSpeechVoice: (): Promise<OpenAiCompatibleSpeechVoiceProviderSummary | null> =>
+    ipcRenderer.invoke('speech:getOpenAiCompatibleSpeechVoice'),
+
+  saveOpenAiCompatibleSpeechVoice: (
+    provider: OpenAiCompatibleSpeechVoiceProvider
+  ): Promise<OpenAiCompatibleSpeechVoiceProviderSummary | null> =>
+    ipcRenderer.invoke('speech:saveOpenAiCompatibleSpeechVoice', provider),
+
+  clearOpenAiCompatibleSpeechVoice: (): Promise<void> =>
+    ipcRenderer.invoke('speech:clearOpenAiCompatibleSpeechVoice'),
 
   onPartialTranscript: (callback: (data: SpeechTranscriptEvent) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, data: SpeechTranscriptEvent): void =>

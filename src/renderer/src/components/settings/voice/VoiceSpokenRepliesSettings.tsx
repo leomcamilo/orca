@@ -9,10 +9,8 @@ import {
   systemSpokenReplySpeech,
   systemSpokenReplyVoices
 } from '@/components/native-chat/voice/spoken-replies/spoken-reply-system-voice'
-import {
-  SpokenReplySampleButton,
-  VoiceSpokenReplyProviderSettings
-} from './VoiceSpokenReplyProviderSettings'
+import { VoiceSpokenReplyProviderSettings } from './VoiceSpokenReplyProviderSettings'
+import { SpokenReplySampleButton } from './VoiceSpokenReplySampleButton'
 import type { SpokenReplyVoice } from '@/components/native-chat/voice/spoken-replies/spoken-reply-speech'
 
 // Radix Select cannot hold an empty value, and a voice URI is never this word.
@@ -50,7 +48,7 @@ export function VoiceSpokenRepliesSettings({
   const chosen = voices.some((voice) => voice.voiceURI === voiceSettings.spokenReplyVoice)
     ? voiceSettings.spokenReplyVoice
     : undefined
-  const usesOpenAi = voiceSettings.spokenReplyProvider === 'openai'
+  const usesService = (voiceSettings.spokenReplyProvider ?? 'system') !== 'system'
   const unavailable = systemSpokenReplySpeech() === null || voices.length === 0
 
   return (
@@ -85,7 +83,7 @@ export function VoiceSpokenRepliesSettings({
         onAddOpenAiKey={onAddOpenAiKey}
         onUpdateVoiceSettings={onUpdateVoiceSettings}
       />
-      {usesOpenAi ? null : (
+      {usesService ? null : (
         <SettingsRow
           className="flex-col items-stretch @lg:flex-row @lg:items-center"
           label={t('components.settings.voice.spokenReplies.voiceLabel', 'Voice')}

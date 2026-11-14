@@ -157,6 +157,12 @@ export type VoiceSettings = {
   spokenReplyProvider?: SpokenReplyProvider
   /** OpenAI's voice when it reads them. Absent = its recommended default. */
   spokenReplyOpenAiVoice?: string
+  /** The ElevenLabs voice id and model when it reads them. Absent model = Flash v2.5. */
+  spokenReplyElevenLabsVoice?: string
+  spokenReplyElevenLabsModel?: string
+  /** Characters the paid speech services may read in a month; null = no limit. Absent = the
+   *  built-in default. */
+  spokenReplyMonthlyCharacterLimit?: number | null
 }
 
 /** Where a dictation goes: an engine in the desktop's own process takes repoTerms, a host resolves worktreeId itself. */

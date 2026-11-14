@@ -70,7 +70,7 @@ export function registerSpeechHandlers(
     }
   })
 
-  registerSpeechSynthesisHandlers()
+  registerSpeechSynthesisHandlers(store)
 
   ipcMain.handle('speech:getCatalog', () => {
     return SPEECH_MODEL_CATALOG

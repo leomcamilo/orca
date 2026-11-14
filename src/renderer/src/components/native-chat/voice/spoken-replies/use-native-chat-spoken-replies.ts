@@ -6,7 +6,9 @@ import type { AgentType } from '../../../../../../shared/agent-status/contracts/
 import type { AgentJournalRenderItem } from '../../../../../../shared/agent-session/journal/agent-session-journal-types'
 import type { VoiceSettings } from '../../../../../../shared/speech-types'
 import {
+  DEFAULT_ELEVENLABS_SPEECH_MODEL,
   DEFAULT_OPENAI_SPEECH_VOICE,
+  isElevenLabsSpeechModel,
   isOpenAiSpeechVoice
 } from '../../../../../../shared/speech-synthesis'
 import {
@@ -59,7 +61,12 @@ export function spokenReplyVoiceFor(
   voice:
     | Pick<
         VoiceSettings,
-        'spokenReplyVoice' | 'dictationLanguage' | 'spokenReplyProvider' | 'spokenReplyOpenAiVoice'
+        | 'spokenReplyVoice'
+        | 'dictationLanguage'
+        | 'spokenReplyProvider'
+        | 'spokenReplyOpenAiVoice'
+        | 'spokenReplyElevenLabsVoice'
+        | 'spokenReplyElevenLabsModel'
       >
     | undefined
 ): SpokenReplyVoicePick {
@@ -69,13 +76,33 @@ export function spokenReplyVoiceFor(
     i18n.language,
     navigator.language
   ])
-  if (voice?.spokenReplyProvider !== 'openai') {
-    return pick
-  }
-  const apiVoice = voice.spokenReplyOpenAiVoice
-  return {
-    ...pick,
-    api: { voice: isOpenAiSpeechVoice(apiVoice) ? apiVoice : DEFAULT_OPENAI_SPEECH_VOICE }
+  switch (voice?.spokenReplyProvider) {
+    case 'openai': {
+      const apiVoice = voice.spokenReplyOpenAiVoice
+      return {
+        ...pick,
+        api: {
+          provider: 'openai',
+          voice: isOpenAiSpeechVoice(apiVoice) ? apiVoice : DEFAULT_OPENAI_SPEECH_VOICE
+        }
+      }
+    }
+    case 'openai-compatible':
+      return { ...pick, api: { provider: 'openai-compatible', voice: '' } }
+    case 'elevenlabs':
+      return {
+        ...pick,
+        api: {
+          provider: 'elevenlabs',
+          voice: voice.spokenReplyElevenLabsVoice ?? '',
+          model: isElevenLabsSpeechModel(voice.spokenReplyElevenLabsModel)
+            ? voice.spokenReplyElevenLabsModel
+            : DEFAULT_ELEVENLABS_SPEECH_MODEL
+        }
+      }
+    case 'system':
+    case undefined:
+      return pick
   }
 }
 

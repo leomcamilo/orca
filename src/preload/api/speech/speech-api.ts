@@ -1,8 +1,12 @@
 import type { SecretAtRestProtection } from '../../../shared/secret-at-rest-protection'
 import type { DictationCleanupResult } from '../../../shared/dictation-cleanup'
 import type {
+  ElevenLabsVoiceListing,
+  OpenAiCompatibleSpeechVoiceProvider,
+  OpenAiCompatibleSpeechVoiceProviderSummary,
   SpeechSynthesisRequest,
-  SpeechSynthesisResult
+  SpeechSynthesisResult,
+  SpeechSynthesisUsage
 } from '../../../shared/speech-synthesis'
 import type {
   DictationContext,
@@ -54,6 +58,18 @@ export type SpeechApi = {
    *  web client. */
   synthesizeSpeech?: (request: SpeechSynthesisRequest) => Promise<SpeechSynthesisResult>
   cancelSpeechSynthesis?: (requestId: string) => Promise<void>
+  getSpeechSynthesisUsage?: () => Promise<SpeechSynthesisUsage>
+  getElevenLabsKeyStatus?: () => Promise<{ configured: boolean }>
+  /** Never returns the saved key. */
+  saveElevenLabsApiKey?: (apiKey: string) => Promise<{ configured: boolean }>
+  clearElevenLabsApiKey?: () => Promise<{ configured: boolean }>
+  listElevenLabsVoices?: () => Promise<ElevenLabsVoiceListing>
+  getOpenAiCompatibleSpeechVoice?: () => Promise<OpenAiCompatibleSpeechVoiceProviderSummary | null>
+  /** A blank key keeps the saved one while the base URL is unchanged. */
+  saveOpenAiCompatibleSpeechVoice?: (
+    provider: OpenAiCompatibleSpeechVoiceProvider
+  ) => Promise<OpenAiCompatibleSpeechVoiceProviderSummary | null>
+  clearOpenAiCompatibleSpeechVoice?: () => Promise<void>
   onPartialTranscript: (callback: (data: SpeechTranscriptEvent) => void) => () => void
   onFinalTranscript: (callback: (data: SpeechTranscriptEvent) => void) => () => void
   onSpeechPending: (callback: (data: SpeechPendingEvent) => void) => () => void

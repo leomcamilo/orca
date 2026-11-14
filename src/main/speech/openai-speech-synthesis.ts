@@ -5,44 +5,17 @@ import {
   type OpenAiTranscriptionResponse
 } from './openai-transcription-client'
 import {
-  isOpenAiSpeechVoice,
-  SPEECH_SYNTHESIS_MAX_CHARACTERS,
-  type SpeechSynthesisResult
-} from '../../shared/speech-synthesis'
+  openAiCompatibleSpeechUrl,
+  readOpenAiCompatibleSpeechVoice
+} from './openai-compatible-speech-voice-store'
+import type { SpeechSynthesisResult } from '../../shared/speech-synthesis'
 
 export const OPENAI_SPEECH_URL = 'https://api.openai.com/v1/audio/speech'
 // OpenAI shuts this model down on 2027-01-06 and names no replacement on this endpoint.
 export const OPENAI_SPEECH_MODEL = 'gpt-4o-mini-tts'
-const SPEECH_TIMEOUT_MS = 30_000
-// About five minutes of 24 kHz mono WAV; a spoken line is seconds long.
-const MAX_AUDIO_BYTES = 16 * 1024 * 1024
-const MAX_REQUEST_ID_LENGTH = 64
 // Its voices are tuned for English; asked, they keep the accent of the text's own language.
 const SPEECH_INSTRUCTIONS =
   "Speak naturally, at a calm conversational pace, with the accent native to the text's language (Brazilian Portuguese for Portuguese)."
-
-const pending = new Map<string, AbortController>()
-
-type ValidRequest = { requestId: string; text: string; voice: string }
-
-function readRequest(request: unknown): ValidRequest | null {
-  if (typeof request !== 'object' || request === null) {
-    return null
-  }
-  const { requestId, text, voice }: Partial<Record<keyof ValidRequest, unknown>> = request
-  if (
-    typeof requestId !== 'string' ||
-    requestId.length === 0 ||
-    requestId.length > MAX_REQUEST_ID_LENGTH ||
-    typeof text !== 'string' ||
-    text.trim().length === 0 ||
-    text.length > SPEECH_SYNTHESIS_MAX_CHARACTERS ||
-    !isOpenAiSpeechVoice(voice)
-  ) {
-    return null
-  }
-  return { requestId, text, voice }
-}
 
 async function failureOf(response: Response, apiKey: string): Promise<SpeechSynthesisResult> {
   const data: OpenAiTranscriptionResponse & { error?: { code?: unknown } } = await response
@@ -59,17 +32,39 @@ async function failureOf(response: Response, apiKey: string): Promise<SpeechSynt
   return {
     ok: false,
     failure: 'refused',
-    message: message ?? `OpenAI answered ${response.status}`
+    message: message ?? `The server answered ${response.status}`
   }
 }
 
-/** One line of a spoken reply as WAV, from OpenAI's speech API with the key saved for dictation.
- *  The key stays in this process; the renderer only ever sees audio or a failure. */
-export async function synthesizeOpenAiSpeech(request: unknown): Promise<SpeechSynthesisResult> {
-  const valid = readRequest(request)
-  if (!valid) {
-    return { ok: false, failure: 'refused', message: 'Invalid speech request' }
+async function postSpeech(
+  url: string,
+  apiKey: string,
+  body: Record<string, string>,
+  signal: AbortSignal
+): Promise<SpeechSynthesisResult> {
+  const response = await getMainHttpClient().fetch(url, {
+    method: 'POST',
+    credentials: 'omit',
+    signal,
+    // Local servers that take no key get no Authorization header.
+    headers: {
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      'Content-Type': 'application/json'
+    },
+    // The guide's lowest-latency format, and one the renderer decodes as is.
+    body: JSON.stringify({ ...body, response_format: 'wav' })
+  })
+  if (!response.ok) {
+    return failureOf(response, apiKey)
   }
+  return { ok: true, audio: new Uint8Array(await response.arrayBuffer()) }
+}
+
+/** One line from OpenAI's speech API, with the key saved for dictation. */
+export async function synthesizeOpenAiSpeech(
+  request: { text: string; voice: string },
+  signal: AbortSignal
+): Promise<SpeechSynthesisResult> {
   if (!hasOpenAiSpeechApiKey()) {
     return { ok: false, failure: 'no-key' }
   }
@@ -79,53 +74,38 @@ export async function synthesizeOpenAiSpeech(request: unknown): Promise<SpeechSy
   } catch {
     return { ok: false, failure: 'no-key' }
   }
-  const cancel = new AbortController()
-  pending.get(valid.requestId)?.abort()
-  pending.set(valid.requestId, cancel)
-  const timeout = AbortSignal.timeout(SPEECH_TIMEOUT_MS)
-  try {
-    const response = await getMainHttpClient().fetch(OPENAI_SPEECH_URL, {
-      method: 'POST',
-      credentials: 'omit',
-      signal: AbortSignal.any([cancel.signal, timeout]),
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OPENAI_SPEECH_MODEL,
-        input: valid.text,
-        voice: valid.voice,
-        instructions: SPEECH_INSTRUCTIONS,
-        // The guide's lowest-latency format, and one the renderer decodes as is.
-        response_format: 'wav'
-      })
-    })
-    if (!response.ok) {
-      return await failureOf(response, apiKey)
-    }
-    const declared = Number(response.headers.get('content-length') ?? 0)
-    if (declared > MAX_AUDIO_BYTES) {
-      await response.body?.cancel()
-      return { ok: false, failure: 'refused', message: 'The speech audio was too large' }
-    }
-    const audio = new Uint8Array(await response.arrayBuffer())
-    if (audio.byteLength > MAX_AUDIO_BYTES) {
-      return { ok: false, failure: 'refused', message: 'The speech audio was too large' }
-    }
-    return { ok: true, audio }
-  } catch {
-    if (cancel.signal.aborted) {
-      return { ok: false, failure: 'cancelled' }
-    }
-    return { ok: false, failure: timeout.aborted ? 'timeout' : 'network' }
-  } finally {
-    if (pending.get(valid.requestId) === cancel) {
-      pending.delete(valid.requestId)
-    }
-  }
+  return postSpeech(
+    OPENAI_SPEECH_URL,
+    apiKey,
+    {
+      model: OPENAI_SPEECH_MODEL,
+      input: request.text,
+      voice: request.voice,
+      instructions: SPEECH_INSTRUCTIONS
+    },
+    signal
+  )
 }
 
-/** Abandons a request still out, so a reply quieted mid-request costs no more audio. */
-export function cancelOpenAiSpeech(requestId: unknown): void {
-  if (typeof requestId === 'string') {
-    pending.get(requestId)?.abort()
+/** One line from the person's own server that speaks OpenAI's speech API. Its model and voice
+ *  are the ones saved with it; not every compatible server takes instructions, so none are sent. */
+export async function synthesizeOpenAiCompatibleSpeech(
+  request: { text: string },
+  signal: AbortSignal
+): Promise<SpeechSynthesisResult> {
+  let server: ReturnType<typeof readOpenAiCompatibleSpeechVoice>
+  try {
+    server = readOpenAiCompatibleSpeechVoice()
+  } catch {
+    server = null
   }
+  if (!server) {
+    return { ok: false, failure: 'no-key' }
+  }
+  return postSpeech(
+    openAiCompatibleSpeechUrl(server.baseUrl),
+    server.apiKey,
+    { model: server.model, input: request.text, voice: server.voice },
+    signal
+  )
 }

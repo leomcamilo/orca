@@ -1,5 +1,4 @@
 import { useId } from 'react'
-import { Volume2 } from 'lucide-react'
 import { Button } from '../../ui/button'
 import type { VoiceSettings } from '../../../../../shared/speech-types'
 import {
@@ -11,50 +10,20 @@ import {
 import { useTranslate } from '@/i18n/use-translate'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select'
 import { SettingsRow } from '../form-controls/SettingsFormControls'
-import { systemSpokenReplySpeech } from '@/components/native-chat/voice/spoken-replies/spoken-reply-system-voice'
-import { spokenReplyVoiceFor } from '@/components/native-chat/voice/spoken-replies/use-native-chat-spoken-replies'
+import { SpokenReplySampleButton } from './VoiceSpokenReplySampleButton'
+import { VoiceSpokenReplyElevenLabsSettings } from './VoiceSpokenReplyElevenLabsSettings'
+import { VoiceSpokenReplyServerSettings } from './VoiceSpokenReplyServerSettings'
+import { VoiceSpokenReplyUsageSettings } from './VoiceSpokenReplyUsageSettings'
 
-const SAMPLE_OWNER = 'settings:spoken-reply-sample'
+const PROVIDERS: readonly SpokenReplyProvider[] = [
+  'system',
+  'openai',
+  'elevenlabs',
+  'openai-compatible'
+]
 
-/** Plays one line as replies will sound with these settings. */
-export function SpokenReplySampleButton({
-  voiceSettings,
-  disabled
-}: {
-  voiceSettings: VoiceSettings
-  disabled: boolean
-}): React.JSX.Element {
-  const t = useTranslate()
-  const label = t('components.settings.voice.spokenReplies.sample', 'Play a sample')
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={() => {
-        const speech = systemSpokenReplySpeech()
-        speech?.silence(SAMPLE_OWNER)
-        speech?.say(
-          SAMPLE_OWNER,
-          [
-            t(
-              'components.settings.voice.spokenReplies.sampleText',
-              'This is how replies will sound.'
-            )
-          ],
-          () => spokenReplyVoiceFor(voiceSettings)
-        )
-      }}
-    >
-      <Volume2 className="size-3.5" />
-    </Button>
-  )
-}
-
-/** Who reads replies: the system voice, or OpenAI with the key saved for dictation. */
+/** Who reads replies: the system voice, OpenAI with the key saved for dictation, ElevenLabs, or a
+ *  voice server of the person's own. */
 export function VoiceSpokenReplyProviderSettings({
   voiceSettings,
   disabled,
@@ -69,8 +38,7 @@ export function VoiceSpokenReplyProviderSettings({
   const t = useTranslate()
   const providerLabelId = useId()
   const voiceLabelId = useId()
-  const provider: SpokenReplyProvider =
-    voiceSettings.spokenReplyProvider === 'openai' ? 'openai' : 'system'
+  const provider: SpokenReplyProvider = voiceSettings.spokenReplyProvider ?? 'system'
   const openAiVoice = isOpenAiSpeechVoice(voiceSettings.spokenReplyOpenAiVoice)
     ? voiceSettings.spokenReplyOpenAiVoice
     : DEFAULT_OPENAI_SPEECH_VOICE
@@ -83,7 +51,7 @@ export function VoiceSpokenReplyProviderSettings({
         labelId={providerLabelId}
         description={t(
           'components.settings.voice.spokenReplies.providerDescription',
-          'The system voice runs on this computer. OpenAI sends the text it reads to OpenAI.'
+          'The system voice runs on this computer. The others receive the text they read.'
         )}
         control={
           <Select
@@ -91,7 +59,7 @@ export function VoiceSpokenReplyProviderSettings({
             disabled={disabled}
             onValueChange={(value) =>
               onUpdateVoiceSettings({
-                spokenReplyProvider: value === 'openai' ? 'openai' : undefined
+                spokenReplyProvider: PROVIDERS.find((option) => option === value)
               })
             }
           >
@@ -104,6 +72,15 @@ export function VoiceSpokenReplyProviderSettings({
               </SelectItem>
               <SelectItem value="openai">
                 {t('components.settings.voice.spokenReplies.providerOpenAi', 'OpenAI (API)')}
+              </SelectItem>
+              <SelectItem value="elevenlabs">
+                {t(
+                  'components.settings.voice.spokenReplies.providerElevenLabs',
+                  'ElevenLabs (API)'
+                )}
+              </SelectItem>
+              <SelectItem value="openai-compatible">
+                {t('components.settings.voice.spokenReplies.providerServer', 'Your voice server')}
               </SelectItem>
             </SelectContent>
           </Select>
@@ -156,6 +133,21 @@ export function VoiceSpokenReplyProviderSettings({
               </Select>
             </div>
           }
+        />
+      ) : provider === 'elevenlabs' ? (
+        <VoiceSpokenReplyElevenLabsSettings
+          voiceSettings={voiceSettings}
+          disabled={disabled}
+          onUpdateVoiceSettings={onUpdateVoiceSettings}
+        />
+      ) : provider === 'openai-compatible' ? (
+        <VoiceSpokenReplyServerSettings voiceSettings={voiceSettings} disabled={disabled} />
+      ) : null}
+      {provider === 'openai' || provider === 'elevenlabs' ? (
+        <VoiceSpokenReplyUsageSettings
+          voiceSettings={voiceSettings}
+          disabled={disabled}
+          onUpdateVoiceSettings={onUpdateVoiceSettings}
         />
       ) : null}
     </>
