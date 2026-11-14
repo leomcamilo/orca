@@ -5,8 +5,10 @@ import { useAppStore } from '@/store'
 import { dispatchDictationControl } from '@/components/dictation/dictation-control-events'
 import { useDictationSpeaking } from '@/components/dictation/dictation-meter-store'
 import { dictationLandsInComposerOf } from '@/components/dictation/use-dictation-queued-send'
+import { isDictationUnderway } from '../../../../../../shared/dictation-session-machine'
 import { useVoiceCallPresence } from '../voice-call-presence'
 import { HANDS_FREE_NO_SPEECH_MS, HandsFreeTurns } from './hands-free-turns'
+import { setWaitsForEmptyComposer } from './spoken-reply-mode'
 import type { NativeChatSpokenReplies } from './use-native-chat-spoken-replies'
 
 export type NativeChatHandsFreeComposer = {
@@ -14,6 +16,8 @@ export type NativeChatHandsFreeComposer = {
   agentWorking: boolean
   /** The composer would take a send now. */
   canSend: boolean
+  /** The draft holds text or images. */
+  hasDraft: boolean
   /** Focuses the composer and starts dictating into it. */
   onOpenMicrophone: () => void
   /** Sends the draft, waiting for the last dictated words to land. */
@@ -47,6 +51,7 @@ export function useHandsFreeTurns(
       agentWorking: composer.agentWorking,
       voiceSpeaking,
       canSend,
+      hasDraft: composer.hasDraft,
       now: Date.now()
     })
     if (action === 'open-microphone') {
@@ -80,19 +85,32 @@ export function useHandsFreeTurns(
         )
       )
     }
+    setWaitsForEmptyComposer(spoken.sessionId, turns.current?.waitsForEmptyComposer() === true)
     return turns.current?.deadline() ?? null
   })
 
   const armed = spoken.handsFree
+  const { sessionId } = spoken
   useEffect(() => {
     if (!armed) {
       return
     }
-    turns.current = new HandsFreeTurns()
+    const listening = new HandsFreeTurns()
+    turns.current = listening
     return () => {
       turns.current = null
+      setWaitsForEmptyComposer(sessionId, false)
+      // The microphone this chat opened closes with its listening, however that ends: Stop
+      // listening, the chat hidden, another chat listening, the composer gone. A dictation the
+      // person started is not this turn's, and stays.
+      if (
+        listening.holdsMicrophone() &&
+        isDictationUnderway(useAppStore.getState().dictationState)
+      ) {
+        dispatchDictationControl('cancel')
+      }
     }
-  }, [armed])
+  }, [armed, sessionId])
 
   useEffect(() => {
     if (!armed) {
@@ -104,5 +122,14 @@ export function useHandsFreeTurns(
     }
     const timer = setTimeout(() => setWoken((count) => count + 1), deadline - Date.now())
     return () => clearTimeout(timer)
-  }, [armed, dictation, userSpeaking, composer.agentWorking, voiceSpeaking, canSend, woken])
+  }, [
+    armed,
+    dictation,
+    userSpeaking,
+    composer.agentWorking,
+    composer.hasDraft,
+    voiceSpeaking,
+    canSend,
+    woken
+  ])
 }

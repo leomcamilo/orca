@@ -14,6 +14,7 @@ function control(on: boolean, handsFree: boolean): NativeChatSpokenReplies {
     line: on && !handsFree ? LINE : null,
     agentLabel: 'Claude',
     handsFree,
+    waitsForEmptyComposer: false,
     toggle: () => {},
     setHandsFree: () => {},
     silence: () => {}
@@ -25,15 +26,20 @@ const RESTING = {
   dictationUnavailable: false,
   agentWorking: false,
   canSend: false,
+  hasDraft: false,
   onOpenMicrophone: () => {},
   onSend: () => {}
 }
 
-function composer(on: boolean, handsFree = false): () => React.JSX.Element {
+function composer(on: boolean, handsFree = false, waiting = false): () => React.JSX.Element {
   return () => (
     <div className="native-chat-appearance p-4 pt-6">
       {!on ? null : handsFree ? (
-        <NativeChatHandsFreeStrip agentLabel="Claude" onStop={() => {}} />
+        <NativeChatHandsFreeStrip
+          agentLabel="Claude"
+          waitsForEmptyComposer={waiting}
+          onStop={() => {}}
+        />
       ) : (
         <NativeChatSpokenReplyStrip line={LINE} agentLabel="Claude" onSilence={() => {}} />
       )}
@@ -52,5 +58,10 @@ export const speaking = defineFixture({ width: 720, render: composer(true) })
 export const off = defineFixture({ width: 720, render: composer(false) })
 
 export const handsFree = defineFixture({ width: 720, render: composer(true, true) })
+
+export const handsFreeWaitingForDraft = defineFixture({
+  width: 720,
+  render: composer(true, true, true)
+})
 
 export const narrow = defineFixture({ width: 360, render: composer(true) })

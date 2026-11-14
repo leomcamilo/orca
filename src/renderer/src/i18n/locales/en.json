@@ -21571,7 +21571,9 @@
         "handsFreeUnheard": "Stopped listening: the microphone picked up sound but no words, twice",
         "handsFreeOn": "Listening for your turn",
         "handsFreeDisclosure": "What the microphone hears is sent to {{agent}} after each pause.",
-        "handsFreeStopShort": "Stop listening"
+        "handsFreeStopShort": "Stop listening",
+        "handsFreeWaiting": "Not listening while there is a draft",
+        "handsFreeWaitingDetail": "Send or clear the draft and the microphone opens again."
       }
     },
     "tab": {

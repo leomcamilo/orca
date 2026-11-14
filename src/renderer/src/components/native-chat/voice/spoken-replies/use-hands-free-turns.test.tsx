@@ -7,6 +7,8 @@ import {
   resetDictationMeter
 } from '@/components/dictation/dictation-meter-store'
 import type { NativeChatSpokenReplies } from './use-native-chat-spoken-replies'
+import { DICTATION_CONTROL_EVENT } from '@/components/dictation/dictation-control-events'
+import { useSpokenReplyMode } from './spoken-reply-mode'
 import { useHandsFreeTurns } from './use-hands-free-turns'
 
 // Stands in for the dictation controller, which knows where a dictation lands.
@@ -15,42 +17,56 @@ vi.mock('@/components/dictation/use-dictation-queued-send', () => ({
   dictationLandsInComposerOf: () => dictation.landsHere
 }))
 
+// What the turn asks of the dictation controller.
+const controls: string[] = []
+const recordControl = (event: Event): void => {
+  if (event instanceof CustomEvent) {
+    controls.push(String(event.detail))
+  }
+}
+
 beforeEach(() => {
   vi.useFakeTimers()
   dictation.landsHere = true
+  controls.length = 0
+  document.addEventListener(DICTATION_CONTROL_EVENT, recordControl)
 })
 
 afterEach(() => {
   cleanup()
+  document.removeEventListener(DICTATION_CONTROL_EVENT, recordControl)
   vi.useRealTimers()
   resetDictationMeter()
   useAppStore.setState({ dictationState: 'idle' })
 })
 
-type Chat = { line: string | null; agentWorking: boolean }
+type Chat = { line: string | null; agentWorking: boolean; handsFree?: boolean; hasDraft?: boolean }
 const STARTING: Chat = { line: null, agentWorking: false }
+const STOPPED: Chat = { ...STARTING, handsFree: false }
 
 function listenForTurns() {
   const events: string[] = []
-  const spoken = (line: string | null): NativeChatSpokenReplies => ({
+  const spoken = (line: string | null, handsFree: boolean): NativeChatSpokenReplies => ({
     on: true,
     sessionId: 'chat-1',
     visible: true,
     line,
     agentLabel: 'Claude',
-    handsFree: true,
+    handsFree,
+    waitsForEmptyComposer: false,
     toggle: () => {},
     setHandsFree: (handsFree) => events.push(handsFree ? 'armed' : 'disarmed'),
     silence: () => {}
   })
   const chat = renderHook(
-    ({ line, agentWorking }: Chat) =>
+    ({ line, agentWorking, handsFree = true, hasDraft = false }: Chat) =>
       useHandsFreeTurns(
-        spoken(line),
+        spoken(line, handsFree),
         {
           dictationUnavailable: false,
           agentWorking,
           canSend: true,
+          hasDraft,
           onOpenMicrophone: () => events.push('open microphone'),
           onSend: () => events.push('send')
         },
@@ -166,4 +182,64 @@ it('opens again when the dictation it was listening to ends by itself', () => {
   dictationIs('idle')
   wait(600)
   expect(events).toEqual(['open microphone', 'open microphone'])
+})
+
+it('closes the microphone it opened when its listening is turned off, hidden or handed to another chat', () => {
+  const { rerender, dictationIs, wait } = listenForTurns()
+  wait(600)
+  dictationIs('listening')
+  rerender(STOPPED)
+  expect(controls).toEqual(['cancel'])
+})
+
+it('closes the microphone it opened when a prompt card takes the composer away', () => {
+  const { unmount, dictationIs, wait } = listenForTurns()
+  wait(600)
+  dictationIs('listening')
+  unmount()
+  expect(controls).toEqual(['cancel'])
+})
+
+it('closes a microphone nobody talks into once, not again as the listening ends', () => {
+  const { events, rerender, dictationIs, wait } = listenForTurns()
+  wait(600)
+  dictationIs('listening')
+  wait(30_000)
+  expect(events).toEqual(['open microphone', 'disarmed'])
+  rerender(STOPPED)
+  expect(controls).toEqual(['cancel'])
+})
+
+it('leaves alone a dictation the person started, and the words it has just sent for', () => {
+  dictation.landsHere = false
+  const theirs = listenForTurns()
+  theirs.dictationIs('listening')
+  theirs.rerender(STOPPED)
+  expect(controls).toEqual([])
+  theirs.unmount()
+
+  dictation.landsHere = true
+  const mine = listenForTurns()
+  mine.dictationIs('idle')
+  mine.wait(600)
+  mine.dictationIs('listening')
+  mine.speak(true)
+  mine.speak(false)
+  mine.wait(1400)
+  expect(mine.events).toEqual(['open microphone', 'send'])
+  // The dictation is still landing the last words when the listening ends.
+  mine.rerender(STOPPED)
+  expect(controls).toEqual([])
+})
+
+it('opens the microphone on an empty composer only, and says so while a draft is in the way', () => {
+  const { events, rerender, wait } = listenForTurns()
+  rerender({ ...STARTING, hasDraft: true })
+  wait(5000)
+  expect(events).toEqual([])
+  expect(useSpokenReplyMode.getState().waitsForEmptyComposer).toBe('chat-1')
+  rerender(STARTING)
+  expect(useSpokenReplyMode.getState().waitsForEmptyComposer).toBeNull()
+  wait(600)
+  expect(events).toEqual(['open microphone'])
 })

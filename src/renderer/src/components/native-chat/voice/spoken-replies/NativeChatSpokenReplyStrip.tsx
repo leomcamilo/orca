@@ -54,6 +54,8 @@ export function NativeChatSpokenReplyStrip(props: {
  *  is sent on its own, with the control that ends it. */
 export function NativeChatHandsFreeStrip(props: {
   agentLabel: string
+  /** The microphone stays closed until the composer is empty. */
+  waitsForEmptyComposer: boolean
   onStop: () => void
 }): React.JSX.Element {
   const t = useTranslate()
@@ -62,14 +64,24 @@ export function NativeChatHandsFreeStrip(props: {
       <Ear className="mt-0.5 size-3.5 shrink-0" aria-hidden />
       <div className="min-w-0 flex-1 py-0.5">
         <span role="status" className="font-medium">
-          {t('components.native-chat.spokenReplies.handsFreeOn', 'Listening for your turn')}
+          {props.waitsForEmptyComposer
+            ? t(
+                'components.native-chat.spokenReplies.handsFreeWaiting',
+                'Not listening while there is a draft'
+              )
+            : t('components.native-chat.spokenReplies.handsFreeOn', 'Listening for your turn')}
         </span>
         <span className="block truncate text-2xs">
-          {t(
-            'components.native-chat.spokenReplies.handsFreeDisclosure',
-            'What the microphone hears is sent to {{agent}} after each pause.',
-            { agent: props.agentLabel }
-          )}
+          {props.waitsForEmptyComposer
+            ? t(
+                'components.native-chat.spokenReplies.handsFreeWaitingDetail',
+                'Send or clear the draft and the microphone opens again.'
+              )
+            : t(
+                'components.native-chat.spokenReplies.handsFreeDisclosure',
+                'What the microphone hears is sent to {{agent}} after each pause.',
+                { agent: props.agentLabel }
+              )}
         </span>
       </div>
       <Button type="button" variant="ghost" size="xs" onClick={props.onStop}>
@@ -99,6 +111,7 @@ export function NativeChatSpokenReplyStripSlot(): React.JSX.Element | null {
   return spoken.handsFree ? (
     <NativeChatHandsFreeStrip
       agentLabel={spoken.agentLabel}
+      waitsForEmptyComposer={spoken.waitsForEmptyComposer}
       onStop={() => spoken.setHandsFree(false)}
     />
   ) : null
