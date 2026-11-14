@@ -1,3 +1,4 @@
+import { app } from 'electron'
 import {
   beginMacUpdateDownload,
   deferMacQuitUntilInstallerReady,
@@ -10,9 +11,14 @@ import { updaterCodedMessage } from '../../../shared/updater-failure-copy'
 import { QUIT_AND_INSTALL_DELAY_MS } from './updater-state'
 import { UpdaterRemoteStatus } from './updater-remote-status'
 import { prepareThisProcessShipItStaging } from '../mac-install/shipit-leftover-recovery'
+import { isOrcaLeoVersion } from '../../../shared/orca-leo/orca-leo-distribution'
 
 export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
   protected quitAndInstall(): void {
+    // An Orca Leo package installs nothing from the official feed, staged by the official app or not.
+    if (isOrcaLeoVersion(app.getVersion())) {
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
@@ -51,6 +57,10 @@ export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
   }
 
   protected downloadUpdate(): void {
+    // An Orca Leo package installs nothing from the official feed, staged by the official app or not.
+    if (isOrcaLeoVersion(app.getVersion())) {
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
