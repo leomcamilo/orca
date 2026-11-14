@@ -30,6 +30,7 @@ import {
   getCrashReportSubmitWarningNotice
 } from './crash-report-submit-notice'
 import { useCrashReportCopy } from './use-crash-report-copy'
+import { withOrcaLeoName } from '../../../../shared/orca-leo/orca-leo-distribution'
 
 function formatSummary(report: CrashReportRecord, t: Translate = translate): string {
   if (isReactErrorBoundaryReport(report)) {
@@ -279,7 +280,9 @@ export function CrashReportDialogSurface({
                 <div className="mt-1 text-muted-foreground">
                   {new Date(report.createdAt).toLocaleString(intlLocale)} · {report.platform}{' '}
                   {report.arch} ·{' '}
-                  {t('auto.components.crash.report.CrashReportDialog.835037edc9', 'Orca')}{' '}
+                  {withOrcaLeoName(
+                    t('auto.components.crash.report.CrashReportDialog.835037edc9', 'Orca')
+                  )}{' '}
                   {report.appVersion}
                 </div>
               </div>

@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/class-names'
 import { useTranslate } from '@/i18n/use-translate'
 import type { AppMemory, UsageValues } from '../../../../shared/process-stats-types'
+import { withOrcaLeoName } from '../../../../shared/orca-leo/orca-leo-distribution'
 import type { Metric } from './resource-usage-merge-types'
 
 export const METRIC_COLUMNS_CLS = 'flex items-center shrink-0 tabular-nums'
@@ -181,7 +182,9 @@ export function AppSection({
         </button>
         <div className="flex-1 min-w-0 py-2 pr-3 flex items-center justify-between">
           <span className="text-[11px] font-semibold uppercase tracking-wide truncate text-muted-foreground">
-            {t('auto.components.status.bar.ResourceUsageStatusSegment.288a4dd177', 'Orca')}
+            {withOrcaLeoName(
+              t('auto.components.status.bar.ResourceUsageStatusSegment.288a4dd177', 'Orca')
+            )}
           </span>
           <div className="flex items-center gap-2 shrink-0">
             <Sparkline samples={app.history} />

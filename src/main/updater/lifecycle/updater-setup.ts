@@ -23,6 +23,7 @@ import { configureMacShipItScheduling } from '../mac-install/macos-shipit-schedu
 import { handleElectronUpdaterProxyLogin } from './electron-updater-proxy-session'
 import { resolveWindowsUpdateInstallDirectory } from './windows-update-install-directory'
 import type { PreQuitCleanupFailureMode, UpdateInstallMode } from './updater-state'
+import { isOrcaLeoVersion } from '../../../shared/orca-leo/orca-leo-distribution'
 
 export type UpdaterSetupOptions = {
   getMainWindow?: () => BrowserWindow | null
@@ -140,7 +141,7 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
       this.sendErrorStatus(`The server update did not complete: ${serveHandoffFailure}`, true)
     }
 
-    if (!app.isPackaged) {
+    if (!app.isPackaged || isOrcaLeoVersion(app.getVersion())) {
       return
     }
 
