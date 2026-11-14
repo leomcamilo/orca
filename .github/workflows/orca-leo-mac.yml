@@ -1,7 +1,8 @@
 # Orca Leo, Leo's personal build of Orca. Runs only for an orca-leo-* tag pushed to leomcamilo/orca,
 # never per commit. No secrets: ad-hoc signed, not notarized, never published as a release.
-# orca-leo-v<version> verifies and builds; orca-leo-check-<label> only verifies. Leo set the budget:
-# a run in 13 minutes at most, with 700 unit tests at most.
+# orca-leo-v<version> verifies and builds; orca-leo-check-<label> only verifies. Leo set the budget
+# on 2026-11-14: a run in 13 minutes at most; every critical unit test (config/orca-leo/
+# critical-tests.mjs) plus at most 700 others nearest the change.
 name: Orca Leo mac build
 
 on:
@@ -16,8 +17,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # The gate runs as two jobs beside the build, so a run takes as long as its slowest job instead of
-  # the sum. A build is accepted only when the whole run succeeds; receber-build.sh checks that.
+  # The gate runs as three jobs beside the build, so a run takes as long as its slowest job instead
+  # of the sum. A build is accepted only when the whole run succeeds; receber-build.sh checks that.
   verify:
     name: static checks against upstream main
     if: github.repository == 'leomcamilo/orca'
@@ -109,6 +110,47 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: orca-leo-unit-tests-${{ github.ref_name }}
+          path: gate-logs
+          retention-days: 14
+          if-no-files-found: ignore
+
+  critical-tests:
+    name: critical unit tests (updater, persistence, cross-version)
+    if: github.repository == 'leomcamilo/orca'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: ./.github/actions/install-node-dependencies
+        with:
+          native-runtime: node
+          node-version: '24'
+
+      - name: Run every critical unit test
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --tags https://github.com/stablyai/orca.git main
+          base="$(git merge-base FETCH_HEAD HEAD)"
+          # Release tags let the cross-version tests check out shipped builds. A release cut after this
+          # base is newer than the code under test, so it is no downgrade case; keep only older ones.
+          git tag -l 'v[0-9]*' --contains "$base" | xargs -r git tag -d >/dev/null
+          mkdir -p gate-logs
+          node config/scripts/workspace-package-build/build-workspace-packages.mjs
+          node config/scripts/native-build/node-addons/ensure-native-runtime.mjs --runtime=node
+          node config/orca-leo/unit-test-budget.mjs --critical --maxWorkers=3 \
+            2>&1 | tee gate-logs/critical-tests.log
+
+      - name: Keep the critical tests' output
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: orca-leo-critical-tests-${{ github.ref_name }}
           path: gate-logs
           retention-days: 14
           if-no-files-found: ignore
