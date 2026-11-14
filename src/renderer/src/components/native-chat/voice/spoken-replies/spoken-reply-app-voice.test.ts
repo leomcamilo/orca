@@ -87,7 +87,7 @@ describe('createAppVoiceSynthesizer', () => {
     expect(done).toBe(1)
   })
 
-  it('renders a reply\'s later lines while its first is spoken', async () => {
+  it("renders a reply's later lines while its first is spoken", async () => {
     const { voice, events, settle } = rig(new Uint8Array([1]))
     voice.prepare?.(['Um.', 'Dois.'], PICK)
     voice.speak('Um.', PICK, () => {})
