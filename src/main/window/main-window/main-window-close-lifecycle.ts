@@ -8,6 +8,10 @@ import type { MainWindowFocusLifecycle } from './main-window-focus-lifecycle'
 import type { MainWindowStateLifecycle } from './main-window-state-lifecycle'
 import { syncTrafficLightPosition } from './main-window-visual-lifecycle'
 import { consumeUserQuitWindowClose } from './user-quit-window-close'
+import {
+  ORCA_LEO_DISTRIBUTION,
+  withOrcaLeoName
+} from '../../../shared/orca-leo/orca-leo-distribution'
 
 export function installMainWindowCloseLifecycle(args: {
   focus: MainWindowFocusLifecycle
@@ -81,10 +85,9 @@ export function installMainWindowCloseLifecycle(args: {
     if (store.getUI().trayMinimizeNoticeShown !== true) {
       try {
         new Notification({
-          title: 'Orca',
-          body: translateMain(
-            'tray.minimizeNotice.body',
-            'Orca is still running in the system tray'
+          title: ORCA_LEO_DISTRIBUTION.displayName,
+          body: withOrcaLeoName(
+            translateMain('tray.minimizeNotice.body', 'Orca is still running in the system tray')
           )
         }).show()
       } catch {
