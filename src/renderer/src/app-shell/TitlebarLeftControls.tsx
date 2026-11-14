@@ -17,6 +17,7 @@ import { useShortcutLabel } from '../hooks/useShortcutLabel'
 import { useAppStore } from '../store/index'
 import { hasCustomTitleBar, hasMacTrafficLights } from './app-window-chrome'
 import type { AppChromeLayout } from './use-app-chrome-layout'
+import { withOrcaLeoName } from '../../../shared/orca-leo/orca-leo-distribution'
 
 /** Reuse left chrome across full-width and sidebar-width headers so controls/popovers stay consistent. */
 export function TitlebarLeftControls({ layout }: { layout: AppChromeLayout }): React.JSX.Element {
@@ -65,8 +66,13 @@ export function TitlebarLeftControls({ layout }: { layout: AppChromeLayout }): R
         {layout.showSidebar && !hasCustomTitleBar && layout.showTitlebarAppName && (
           <ContextMenu>
             <ContextMenuTrigger asChild>
-              <div className="titlebar-app-name" aria-label={t('auto.App.5096cbbc86', 'Orca')}>
-                <span className="titlebar-app-name-main">{t('auto.App.5096cbbc86', 'Orca')}</span>
+              <div
+                className="titlebar-app-name"
+                aria-label={withOrcaLeoName(t('auto.App.5096cbbc86', 'Orca'))}
+              >
+                <span className="titlebar-app-name-main">
+                  {withOrcaLeoName(t('auto.App.5096cbbc86', 'Orca'))}
+                </span>
               </div>
             </ContextMenuTrigger>
             <ContextMenuContent>
