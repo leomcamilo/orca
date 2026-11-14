@@ -9,7 +9,7 @@ import { hasServeUpdateSupervisor } from '../serve-update-handoff'
 import { getLinuxPackageType } from '../linux-package/linux-update-package-type'
 import { UpdaterNudge } from '../nudges/updater-nudge'
 import type { UpdateInstallMode } from './updater-state'
-import { ORCA_LEO_DISTRIBUTION } from '../../orca-leo/orca-leo-distribution'
+import { ORCA_LEO_DISTRIBUTION } from '../../../shared/orca-leo/orca-leo-distribution'
 
 export abstract class UpdaterRemoteStatus extends UpdaterNudge {
   protected getUpdateStatus(): UpdateStatus {

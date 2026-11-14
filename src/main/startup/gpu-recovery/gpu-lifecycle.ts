@@ -25,7 +25,7 @@ import {
 } from '../windows-install-permissions/windows-install-dir-acl-recovery'
 import { mainProcessState as state, gpuFallbackEnvironment } from '../main-process-state'
 import { createGpuAccelerationAboutPanelOptions } from '../../menu/gpu-acceleration-about-panel'
-import { ORCA_LEO_DISTRIBUTION } from '../../orca-leo/orca-leo-distribution'
+import { ORCA_LEO_DISTRIBUTION } from '../../../shared/orca-leo/orca-leo-distribution'
 
 export function createGpuCrashDiagnosticsRecorder(): GpuCrashDiagnosticsRecorder | null {
   if (process.platform !== 'win32') {
