@@ -3,13 +3,15 @@
 // the whole suite, which held each build for over twenty minutes.
 // Order: the test files the change touched, then the `<stem>.test.*` / `<stem>.*.test.*` siblings of
 // the files it touched, then the other tests in their folders. A file that would pass the budget is
-// left out and named.
+// left out and named. The critical tests (critical-tests.mjs) run in full in their own job, so they
+// are not counted here; `--critical` runs them.
 import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { collectChangedFiles } from '../scripts/preflight/changed-checks/check-changed-pass-cache.mjs'
+import { isCriticalTest } from './critical-tests.mjs'
 
 const UNIT_TEST_FILE = /\.test\.[cm]?[jt]sx?$/
 const SOURCE_FILE = /\.[cm]?[jt]sx?$/
@@ -114,14 +116,40 @@ function countTests(root, files) {
   }
 }
 
+/** Every critical test, with no budget: they guard data and the installation. */
+function runCritical(root, maxWorkers) {
+  const files = execFileSync('git', ['ls-files', '-z'], {
+    cwd: root,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024
+  })
+    .split('\0')
+    .filter((file) => file && isCriticalTest(file) && existsSync(path.join(root, file)))
+  console.log(`critical tests: ${files.length} file(s), run in full.`)
+  if (files.length === 0) {
+    return 0
+  }
+  const run = spawnSync(
+    process.execPath,
+    [VITEST, 'run', '--config', 'config/vitest.config.ts', `--maxWorkers=${maxWorkers}`, ...files],
+    { cwd: root, stdio: 'inherit', env: process.env }
+  )
+  return run.status ?? 1
+}
+
 function main() {
   const root = process.cwd()
   const argv = process.argv.slice(2)
   const base = option(argv, 'base', null)
   const budget = Number(option(argv, 'budget', '700'))
   const maxWorkers = option(argv, 'maxWorkers', '3')
+  if (argv.includes('--critical')) {
+    return runCritical(root, maxWorkers)
+  }
   if (!base || !Number.isSafeInteger(budget) || budget < 0) {
-    console.error('Usage: unit-test-budget.mjs --base=<ref> [--budget=700] [--maxWorkers=3]')
+    console.error(
+      'Usage: unit-test-budget.mjs --base=<ref> [--budget=700] [--maxWorkers=3] | --critical'
+    )
     return 2
   }
   const mergeBase = execFileSync('git', ['merge-base', base, 'HEAD'], {
@@ -138,7 +166,7 @@ function main() {
       }
     },
     (file) => existsSync(path.join(root, file))
-  )
+  ).filter((file) => !isCriticalTest(file))
   if (files.length === 0) {
     console.log('unit-test budget: no test file near the change.')
     return 0
