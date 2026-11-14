@@ -7,6 +7,7 @@ import { translateMain } from '../i18n/main-i18n'
 import { quitAndStopAllSessionsMenuText } from '../menu/app-menu-quit-item'
 import { composeTrayAttentionIcon, tintTrayTemplateForAttention } from './tray-attention-icon'
 import { stampTrayDevBadge } from './tray-dev-badge'
+import { ORCA_LEO_DISTRIBUTION, withOrcaLeoName } from '../../shared/orca-leo/orca-leo-distribution'
 
 export type SystemTrayOptions = {
   /** App icon id from settings; the tray reuses the app icon image. */
@@ -45,7 +46,7 @@ let nativeThemeUpdatedListener: (() => void) | null = null
 // Per-worktree tooltips distinguish concurrent dev instances.
 function baseTooltip(): string {
   if (!devIndicator) {
-    return 'Orca'
+    return ORCA_LEO_DISTRIBUTION.displayName
   }
   return devIndicator.label ? `Orca DEV (${devIndicator.label})` : 'Orca DEV'
 }
@@ -81,7 +82,7 @@ function applyTrayImage(): void {
         tray.setToolTip(
           devIndicator
             ? `${baseTooltip()} - ${translateMain('tray.activityWaitingSuffix', 'activity waiting')}`
-            : translateMain('tray.activityWaiting', 'Orca - activity waiting')
+            : withOrcaLeoName(translateMain('tray.activityWaiting', 'Orca - activity waiting'))
         )
         return
       } catch (error) {

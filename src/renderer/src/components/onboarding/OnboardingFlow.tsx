@@ -23,6 +23,7 @@ import { addAppKeyListener, removeAppKeyListener } from '@/lib/keyboard/app-keyb
 import { useScrollEdgeFades } from '@/lib/list-interaction/use-scroll-edge-fades'
 import { AgentSurfaceStep } from './AgentSurfaceStep'
 import { stepCopy, stepTooltipLabels } from './onboarding-step-copy'
+import { withOrcaLeoName } from '../../../../shared/orca-leo/orca-leo-distribution'
 
 type OnboardingFlowProps = {
   onboarding: OnboardingState
@@ -141,7 +142,11 @@ export default function OnboardingFlow({
                   aria-hidden="true"
                   className="h-7 w-auto shrink-0 invert dark:invert-0"
                 />
-                <span>{t('auto.components.onboarding.OnboardingFlow.a249f81538', 'Orca')}</span>
+                <span>
+                  {withOrcaLeoName(
+                    t('auto.components.onboarding.OnboardingFlow.a249f81538', 'Orca')
+                  )}
+                </span>
               </div>
               <OnboardingLanguageSwitcher
                 open={languagePickerOpen}
