@@ -148,25 +148,68 @@ export function createApiVoiceSynthesizer(deps: {
 }
 
 let context: AudioContext | null = null
+// What the voice puts out, measured where it leaves for the speakers.
+let output: { analyser: AnalyserNode; samples: Float32Array<ArrayBuffer> } | null = null
+let sounding = 0
 
 /** Plays through one shared AudioContext, created on first use. */
 export const spokenReplyAudio: SpokenReplyAudio = {
   play: async (sound, onEnded) => {
     context ??= new AudioContext()
     await context.resume()
+    if (!output) {
+      const analyser = context.createAnalyser()
+      analyser.fftSize = 1024
+      analyser.connect(context.destination)
+      output = { analyser, samples: new Float32Array(analyser.fftSize) }
+    }
     // decodeAudioData takes the buffer over, so it gets its own copy.
     const buffer = await context.decodeAudioData(sound.slice().buffer)
     const source = context.createBufferSource()
     source.buffer = buffer
-    source.connect(context.destination)
-    source.onended = onEnded
+    source.connect(output.analyser)
+    let ended = false
+    const end = (): void => {
+      if (!ended) {
+        ended = true
+        sounding -= 1
+        onEnded()
+      }
+    }
+    source.onended = end
+    sounding += 1
     source.start()
     return {
       stop: () => {
         source.onended = null
         source.stop()
-        onEnded()
+        end()
       }
     }
+  }
+}
+
+/** Whether a reply sounds through this page now, where the browser's echo cancellation hears it. */
+export function spokenReplyAudioSounding(): boolean {
+  return sounding > 0
+}
+
+/** RMS of what the voice plays now. */
+export function spokenReplyOutputLevel(): number {
+  if (!output) {
+    return 0
+  }
+  output.analyser.getFloatTimeDomainData(output.samples)
+  let sum = 0
+  for (const sample of output.samples) {
+    sum += sample * sample
+  }
+  return Math.sqrt(sum / output.samples.length)
+}
+
+/** Holds the reply where it is, or lets it play on from there. */
+export function holdSpokenReplyAudio(held: boolean): void {
+  if (context) {
+    void (held ? context.suspend() : context.resume())
   }
 }
