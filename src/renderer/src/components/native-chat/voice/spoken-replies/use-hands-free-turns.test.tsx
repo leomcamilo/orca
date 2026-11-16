@@ -20,7 +20,8 @@ vi.mock('@/components/dictation/use-dictation-queued-send', () => ({
 }))
 
 // Stands in for a voice read by an API, which plays on this page.
-const voice = { sounding: true, output: 0.1, holds: [] as boolean[] }
+const holds: boolean[] = []
+const voice = { sounding: true, output: 0.1, holds }
 vi.mock('./spoken-reply-api-voice', () => ({
   spokenReplyAudioSounding: () => voice.sounding,
   spokenReplyOutputLevel: () => voice.output,
