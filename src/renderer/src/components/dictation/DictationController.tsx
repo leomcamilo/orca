@@ -399,8 +399,9 @@ export function DictationController() {
     onFinal: (text) => {
       dispatch({ type: 'final-text' })
       // The microphone can be open while a reply is read; the reply heard back is not the person.
-      if (!dictationSpokenEcho.heard(text, Date.now())) {
-        deliverRef.current?.(text)
+      const theirs = dictationSpokenEcho.without(text, Date.now())
+      if (theirs) {
+        deliverRef.current?.(theirs)
       }
     },
     onStopped: (sessionId) => stoppedSessions.record(sessionId),
