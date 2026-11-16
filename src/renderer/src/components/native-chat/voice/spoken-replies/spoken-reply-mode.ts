@@ -14,7 +14,16 @@ export const useSpokenReplyMode = create<{
   /** The listening chat whose microphone is open while its reply is read, to hear the person
    *  over it. Its own dictation does not quiet that reply. */
   overhearing: string | null
-}>(() => ({ on: {}, handsFree: {}, waitsForEmptyComposer: null, overhearing: null }))
+  /** The listening chat whose microphone is open while its agent works; what the person says
+   *  waits for the turn's end. */
+  queueing: string | null
+}>(() => ({
+  on: {},
+  handsFree: {},
+  waitsForEmptyComposer: null,
+  overhearing: null,
+  queueing: null
+}))
 
 function withChat(chats: ChatSet, sessionId: string, member: boolean): ChatSet {
   const { [sessionId]: _was, ...others } = chats
@@ -68,5 +77,11 @@ export function setOverhearing(sessionId: string, overhearing: boolean): void {
       : state.overhearing === sessionId
         ? { overhearing: null }
         : state
+  )
+}
+
+export function setQueueing(sessionId: string, queueing: boolean): void {
+  useSpokenReplyMode.setState((state) =>
+    queueing ? { queueing: sessionId } : state.queueing === sessionId ? { queueing: null } : state
   )
 }

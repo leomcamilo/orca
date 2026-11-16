@@ -56,32 +56,47 @@ export function NativeChatHandsFreeStrip(props: {
   agentLabel: string
   /** The microphone stays closed until the composer is empty. */
   waitsForEmptyComposer: boolean
+  /** The microphone is open while the agent works; what is said waits for its end. */
+  queuesForTurnEnd: boolean
   onStop: () => void
 }): React.JSX.Element {
   const t = useTranslate()
+  const agent = { agent: props.agentLabel }
   return (
     <NativeChatComposerTabStrip data-native-chat-spoken-reply="hands-free">
       <Ear className="mt-0.5 size-3.5 shrink-0" aria-hidden />
       <div className="min-w-0 flex-1 py-0.5">
         <span role="status" className="font-medium">
-          {props.waitsForEmptyComposer
+          {props.queuesForTurnEnd
             ? t(
-                'components.native-chat.spokenReplies.handsFreeWaiting',
-                'Not listening while there is a draft'
+                'components.native-chat.spokenReplies.handsFreeQueueing',
+                'Listening while {{agent}} works',
+                agent
               )
-            : t('components.native-chat.spokenReplies.handsFreeOn', 'Listening for your turn')}
+            : props.waitsForEmptyComposer
+              ? t(
+                  'components.native-chat.spokenReplies.handsFreeWaiting',
+                  'Not listening while there is a draft'
+                )
+              : t('components.native-chat.spokenReplies.handsFreeOn', 'Listening for your turn')}
         </span>
         <span className="block truncate text-2xs">
-          {props.waitsForEmptyComposer
+          {props.queuesForTurnEnd
             ? t(
-                'components.native-chat.spokenReplies.handsFreeWaitingDetail',
-                'Send or clear the draft and the microphone opens again.'
+                'components.native-chat.spokenReplies.handsFreeQueueingDetail',
+                'What you say waits until {{agent}} finishes. Say "stop" to stop it.',
+                agent
               )
-            : t(
-                'components.native-chat.spokenReplies.handsFreeDisclosure',
-                'What the microphone hears is sent to {{agent}} after each pause.',
-                { agent: props.agentLabel }
-              )}
+            : props.waitsForEmptyComposer
+              ? t(
+                  'components.native-chat.spokenReplies.handsFreeWaitingDetail',
+                  'Send or clear the draft and the microphone opens again.'
+                )
+              : t(
+                  'components.native-chat.spokenReplies.handsFreeDisclosure',
+                  'What the microphone hears is sent to {{agent}} after each pause.',
+                  agent
+                )}
         </span>
       </div>
       <Button type="button" variant="ghost" size="xs" onClick={props.onStop}>
@@ -112,6 +127,7 @@ export function NativeChatSpokenReplyStripSlot(): React.JSX.Element | null {
     <NativeChatHandsFreeStrip
       agentLabel={spoken.agentLabel}
       waitsForEmptyComposer={spoken.waitsForEmptyComposer}
+      queuesForTurnEnd={spoken.queuesForTurnEnd}
       onStop={() => spoken.setHandsFree(false)}
     />
   ) : null

@@ -15,6 +15,7 @@ function control(on: boolean, handsFree: boolean): NativeChatSpokenReplies {
     agentLabel: 'Claude',
     handsFree,
     waitsForEmptyComposer: false,
+    queuesForTurnEnd: false,
     toggle: () => {},
     setHandsFree: () => {},
     silence: () => {}
@@ -31,13 +32,19 @@ const RESTING = {
   onSend: () => {}
 }
 
-function composer(on: boolean, handsFree = false, waiting = false): () => React.JSX.Element {
+function composer(
+  on: boolean,
+  handsFree = false,
+  waiting = false,
+  queueing = false
+): () => React.JSX.Element {
   return () => (
     <div className="native-chat-appearance p-4 pt-6">
       {!on ? null : handsFree ? (
         <NativeChatHandsFreeStrip
           agentLabel="Claude"
           waitsForEmptyComposer={waiting}
+          queuesForTurnEnd={queueing}
           onStop={() => {}}
         />
       ) : (
@@ -62,6 +69,11 @@ export const handsFree = defineFixture({ width: 720, render: composer(true, true
 export const handsFreeWaitingForDraft = defineFixture({
   width: 720,
   render: composer(true, true, true)
+})
+
+export const handsFreeWhileWorking = defineFixture({
+  width: 720,
+  render: composer(true, true, false, true)
 })
 
 export const narrow = defineFixture({ width: 360, render: composer(true) })

@@ -136,6 +136,23 @@ export function VoiceSpokenRepliesSettings({
           })
         }
       />
+      <SettingsSwitchRow
+        label={t(
+          'components.settings.voice.spokenReplies.listenWhileWorkingLabel',
+          'Listen while the agent works'
+        )}
+        description={t(
+          'components.settings.voice.spokenReplies.listenWhileWorkingDescription',
+          'While a chat listens for your turn, the microphone also stays open as the agent thinks and works. What you say waits in the draft and goes once it finishes, after the reply is read. Say "stop" alone to stop the agent.'
+        )}
+        checked={voiceSettings.spokenReplyListenWhileWorking !== false}
+        disabled={unavailable}
+        onChange={() =>
+          onUpdateVoiceSettings({
+            spokenReplyListenWhileWorking: voiceSettings.spokenReplyListenWhileWorking === false
+          })
+        }
+      />
     </SettingsGroup>
   )
 }

@@ -8,9 +8,15 @@ import { dictationLandsInComposerOf } from '@/components/dictation/use-dictation
 import { isDictationUnderway } from '../../../../../../shared/dictation-session-machine'
 import { useVoiceCallPresence } from '../voice-call-presence'
 import { HANDS_FREE_NO_SPEECH_MS, HandsFreeTurns } from './hands-free-turns'
-import { setOverhearing, setWaitsForEmptyComposer, useSpokenReplyMode } from './spoken-reply-mode'
+import {
+  setOverhearing,
+  setQueueing,
+  setWaitsForEmptyComposer,
+  useSpokenReplyMode
+} from './spoken-reply-mode'
 import type { NativeChatSpokenReplies } from './use-native-chat-spoken-replies'
 import { useSpokenReplyBargeIn } from './use-spoken-reply-barge-in'
+import { useSpokenStopCommand } from './use-spoken-stop-command'
 
 export type NativeChatHandsFreeComposer = {
   dictationUnavailable: boolean
@@ -23,6 +29,8 @@ export type NativeChatHandsFreeComposer = {
   onOpenMicrophone: () => void
   /** Sends the draft, waiting for the last dictated words to land. */
   onSend: () => void
+  /** Stops the agent's running turn, as the Stop button does. */
+  onStopTurn?: () => void
 }
 
 /** Runs hands-free turns while the chat listens for the person. The turn moves when a fact it
@@ -41,6 +49,9 @@ export function useHandsFreeTurns(
   const voiceSpeaking = spoken.line !== null
   const canSend = composer.canSend && !composer.dictationUnavailable && !inCall
   const interrupts = useAppStore((store) => store.settings?.voice?.spokenReplyInterrupt === true)
+  const listensWhileWorking = useAppStore(
+    (store) => store.settings?.voice?.spokenReplyListenWhileWorking !== false
+  )
   const turns = useRef<HandsFreeTurns | null>(null)
   // Moved by the timer, or by the person heard over the reply, to look at the turn again.
   const [woken, setWoken] = useState(0)
@@ -56,6 +67,13 @@ export function useHandsFreeTurns(
       setWoken((count) => count + 1)
     }
   )
+  const queueing = useSpokenReplyMode((state) => state.queueing === sessionId)
+  // "Para" said while the agent worked stopped it; what waits goes out with the person's next words.
+  const stoppedByVoice = useRef(false)
+  useSpokenStopCommand(armed && queueing, () => {
+    stoppedByVoice.current = true
+    composer.onStopTurn?.()
+  })
 
   const look = useEffectEvent((): number | null => {
     const action = turns.current?.next({
@@ -68,10 +86,15 @@ export function useHandsFreeTurns(
       hasDraft: composer.hasDraft,
       interrupts,
       heardOverReply: heardOverReply.current,
+      listensWhileWorking,
+      stoppedByVoice: stoppedByVoice.current,
       now: Date.now()
     })
     if (turns.current?.overhears() !== true) {
       heardOverReply.current = false
+    }
+    if (turns.current?.queuesForTurnEnd() !== true) {
+      stoppedByVoice.current = false
     }
     if (action === 'overhear') {
       // Marked before the microphone opens, so its dictation does not quiet the reply.
@@ -112,6 +135,7 @@ export function useHandsFreeTurns(
     }
     setWaitsForEmptyComposer(spoken.sessionId, turns.current?.waitsForEmptyComposer() === true)
     setOverhearing(spoken.sessionId, turns.current?.overhears() === true)
+    setQueueing(spoken.sessionId, turns.current?.queuesForTurnEnd() === true)
     return turns.current?.deadline() ?? null
   })
 
@@ -125,6 +149,7 @@ export function useHandsFreeTurns(
       turns.current = null
       setWaitsForEmptyComposer(sessionId, false)
       setOverhearing(sessionId, false)
+      setQueueing(sessionId, false)
       // The microphone this chat opened closes with its listening, however that ends: Stop
       // listening, the chat hidden, another chat listening, the composer gone. A dictation the
       // person started is not this turn's, and stays.
@@ -156,6 +181,7 @@ export function useHandsFreeTurns(
     voiceSpeaking,
     canSend,
     interrupts,
+    listensWhileWorking,
     woken
   ])
 }

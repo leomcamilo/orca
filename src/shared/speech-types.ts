@@ -166,6 +166,9 @@ export type VoiceSettings = {
   /** While the chat listens for the person's turn, their words stop a reply being read instead
    *  of going out after it. Absent = off. */
   spokenReplyInterrupt?: boolean
+  /** While the chat listens for the person's turn, the microphone stays open as the agent works;
+   *  what they say waits for the turn's end. Absent = on. */
+  spokenReplyListenWhileWorking?: boolean
 }
 
 /** Where a dictation goes: an engine in the desktop's own process takes repoTerms, a host resolves worktreeId itself. */

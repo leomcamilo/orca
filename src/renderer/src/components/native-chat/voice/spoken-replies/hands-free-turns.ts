@@ -17,6 +17,10 @@ export type HandsFreeFacts = {
   interrupts: boolean
   /** The person kept talking while the reply was held to listen, before any word landed. */
   heardOverReply: boolean
+  /** The microphone stays open while the agent works, and what is said waits for the turn's end. */
+  listensWhileWorking: boolean
+  /** The person stopped the agent by voice: what waits goes out with their next words. */
+  stoppedByVoice: boolean
   now: number
 }
 
@@ -48,15 +52,20 @@ type Phase =
   | { name: 'opening'; since: number }
   /** The microphone is open on a reply being read. The meter hears the reply too, so only words
    *  that land in the composer, which the dictation's echo filter has passed, count. */
-  | { name: 'overhearing'; since: number; heard: boolean }
+  /** `draftAtStart`: words that waited for the turn's end were already in the draft, so only the
+   *  person heard over the reply stops it. */
+  | { name: 'overhearing'; since: number; heard: boolean; draftAtStart: boolean }
   /** `overheard`: the microphone was open over the reply, when the meter could not tell the
-   *  person from the voice; words of theirs that land afterwards count as speech. */
+   *  person from the voice; words of theirs that land afterwards count as speech. `whileWorking`:
+   *  the agent still works, or `workEndedAt` its turn ended a moment ago, so what lands waits. */
   | {
       name: 'listening'
       since: number
       lastSpeechAt: number | null
       speaking: boolean
       overheard: boolean
+      whileWorking: boolean
+      workEndedAt: number | null
     }
   | { name: 'sent'; since: number; sawWork: boolean }
 
@@ -70,6 +79,9 @@ function dueAt(phase: Phase): number | null {
       // Once the microphone is open over the reply, only a change moves the turn.
       return phase.heard ? null : phase.since + OPEN_TIMEOUT_MS
     case 'listening':
+      if (phase.whileWorking) {
+        return phase.workEndedAt === null ? null : phase.workEndedAt + HANDS_FREE_SETTLE_MS
+      }
       if (phase.speaking) {
         return null
       }
@@ -82,7 +94,8 @@ function dueAt(phase: Phase): number | null {
 }
 
 function quiet(facts: HandsFreeFacts): boolean {
-  return facts.dictation === 'idle' && !facts.agentWorking && !facts.voiceSpeaking && facts.canSend
+  const working = facts.agentWorking && !facts.listensWhileWorking
+  return facts.dictation === 'idle' && !working && !facts.voiceSpeaking && facts.canSend
 }
 
 // A draft already there would go out with whatever the microphone hears next, noise included, so
@@ -93,7 +106,8 @@ function ready(facts: HandsFreeFacts): boolean {
 
 /** Takes turns with the agent by voice: opens the microphone once the agent has finished, keeps it
  *  open while the reply is read so the person can talk over it, and sends what they said after
- *  the reply and a pause. The microphone stays closed while the agent works. It sends only the
+ *  the reply and a pause. Unless asked to listen while the agent works, the microphone stays
+ *  closed meanwhile; when it listens, what is said waits for the turn's end. It sends only the
  *  dictation it opened into its own composer; dictation the person starts anywhere is theirs,
  *  and this waits it out. */
 export class HandsFreeTurns {
@@ -125,6 +139,11 @@ export class HandsFreeTurns {
     return this.phase.name === 'overhearing'
   }
 
+  /** The microphone is open while the agent works; what is said waits for the turn's end. */
+  queuesForTurnEnd(): boolean {
+    return this.phase.name === 'listening' && this.phase.whileWorking
+  }
+
   /** Only the draft in the composer keeps the microphone from opening. */
   waitsForEmptyComposer(): boolean {
     return this.draftInTheWay
@@ -151,7 +170,7 @@ export class HandsFreeTurns {
         facts.canSend &&
         !facts.hasDraft
       ) {
-        this.phase = { name: 'overhearing', since: now, heard: false }
+        this.phase = { name: 'overhearing', since: now, heard: false, draftAtStart: false }
         return 'overhear'
       }
       if (!ready(facts)) {
@@ -178,7 +197,9 @@ export class HandsFreeTurns {
             since: now,
             lastSpeechAt: null,
             speaking: false,
-            overheard: false
+            overheard: false,
+            whileWorking: facts.agentWorking,
+            workEndedAt: null
           }
         } else {
           this.rest(facts)
@@ -207,6 +228,35 @@ export class HandsFreeTurns {
         phase.lastSpeechAt = now
       }
       phase.speaking = facts.userSpeaking
+      if (facts.agentWorking && facts.listensWhileWorking) {
+        // The agent works on: what is said waits in the draft for the turn's end.
+        phase.whileWorking = true
+        phase.workEndedAt = null
+        return null
+      }
+      if (phase.whileWorking) {
+        if (facts.voiceSpeaking) {
+          // Its opening is read over the open microphone; what waits goes after it.
+          this.phase = {
+            name: 'overhearing',
+            since: now,
+            heard: true,
+            draftAtStart: facts.hasDraft
+          }
+          return null
+        }
+        // The reply may start reading a moment after the work ends.
+        phase.workEndedAt ??= now
+        if (now - phase.workEndedAt < HANDS_FREE_SETTLE_MS) {
+          return null
+        }
+        // Nothing to read: the person's own turn starts now.
+        phase.whileWorking = false
+        phase.since = now
+        if (facts.stoppedByVoice) {
+          phase.lastSpeechAt = null
+        }
+      }
       if (facts.userSpeaking) {
         return null
       }
@@ -229,9 +279,9 @@ export class HandsFreeTurns {
     }
     if (phase.sawWork) {
       this.unheardSends = 0
-      if (!facts.agentWorking) {
+      if (!facts.agentWorking || facts.listensWhileWorking) {
         this.rest(facts)
-        // The reply may start reading in the moment the work ends.
+        // The reply may start reading in the moment the work ends, or the microphone open on it.
         return this.move(facts)
       }
       return null
@@ -248,7 +298,7 @@ export class HandsFreeTurns {
    *  talks over it and asked to interrupt. When the reply ends, what they said goes out after the
    *  next pause, and nothing is lost. */
   private overhear(
-    phase: { name: 'overhearing'; since: number; heard: boolean },
+    phase: Extract<Phase, { name: 'overhearing' }>,
     facts: HandsFreeFacts
   ): HandsFreeAction {
     const { now } = facts
@@ -276,18 +326,23 @@ export class HandsFreeTurns {
             since: now,
             lastSpeechAt: facts.hasDraft ? now : null,
             speaking: false,
-            overheard: true
+            overheard: true,
+            whileWorking: false,
+            workEndedAt: null
           }
         : { name: 'opening', since: phase.since }
       return null
     }
-    if (mine && facts.interrupts && (facts.hasDraft || facts.heardOverReply)) {
+    const newWords = facts.hasDraft && !phase.draftAtStart
+    if (mine && facts.interrupts && (newWords || facts.heardOverReply)) {
       this.phase = {
         name: 'listening',
         since: now,
         lastSpeechAt: now,
         speaking: false,
-        overheard: true
+        overheard: true,
+        whileWorking: false,
+        workEndedAt: null
       }
       return 'interrupt-voice'
     }

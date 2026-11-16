@@ -10,7 +10,9 @@ const quiet: Omit<HandsFreeFacts, 'now'> = {
   canSend: true,
   hasDraft: false,
   interrupts: false,
-  heardOverReply: false
+  heardOverReply: false,
+  listensWhileWorking: false,
+  stoppedByVoice: false
 }
 const mine: Omit<HandsFreeFacts, 'now'> = { ...quiet, dictation: 'listening', ownsDictation: true }
 const elsewhere: Omit<HandsFreeFacts, 'now'> = { ...quiet, dictation: 'listening' }
@@ -104,6 +106,85 @@ describe('HandsFreeTurns', () => {
     // What they said lands as they go on, and goes out after their pause.
     expect(stops.next({ ...interrupts, hasDraft: true, now: 2000 })).toBeNull()
     expect(stops.next({ ...interrupts, hasDraft: true, now: 2400 })).toBe('send')
+  })
+
+  describe('listening while the agent works', () => {
+    const working: Omit<HandsFreeFacts, 'now'> = {
+      ...quiet,
+      listensWhileWorking: true,
+      agentWorking: true
+    }
+    const hearing: Omit<HandsFreeFacts, 'now'> = {
+      ...working,
+      dictation: 'listening',
+      ownsDictation: true
+    }
+
+    /** A turn that opened the microphone while the agent works and heard words that now wait. */
+    function waitingWords(): HandsFreeTurns {
+      const turns = new HandsFreeTurns()
+      turns.next({ ...working, now: 0 })
+      expect(turns.next({ ...working, now: 600 })).toBe('open-microphone')
+      turns.next({ ...hearing, now: 700 })
+      expect(turns.queuesForTurnEnd()).toBe(true)
+      // However long the agent works, what the person said waits: nothing is timed or sent.
+      expect(turns.next({ ...hearing, userSpeaking: true, now: 1000 })).toBeNull()
+      expect(turns.next({ ...hearing, hasDraft: true, now: 2000 })).toBeNull()
+      expect(turns.deadline()).toBeNull()
+      expect(turns.next({ ...hearing, hasDraft: true, now: 60_000 })).toBeNull()
+      return turns
+    }
+
+    it('sends what waited once the reply has been read, and listens again as the agent works', () => {
+      const turns = waitingWords()
+      const done = { ...hearing, agentWorking: false, hasDraft: true }
+      // The reply's opening is read over the open microphone; what waited does not stop it.
+      expect(turns.next({ ...done, voiceSpeaking: true, interrupts: true, now: 61_000 })).toBeNull()
+      expect(turns.overhears()).toBe(true)
+      expect(turns.next({ ...done, now: 65_000 })).toBeNull()
+      expect(turns.next({ ...done, now: 66_400 })).toBe('send')
+      // The next turn starts working, and the microphone opens on it again.
+      expect(turns.next({ ...working, dictation: 'stopping', now: 66_500 })).toBeNull()
+      expect(turns.next({ ...working, now: 67_000 })).toBeNull()
+      expect(turns.next({ ...working, now: 67_600 })).toBe('open-microphone')
+    })
+
+    it('sends what waited a moment after a turn with nothing to read ends', () => {
+      const turns = waitingWords()
+      const done = { ...hearing, agentWorking: false, hasDraft: true }
+      // The reply may start reading just after the work ends, so what waited holds a moment.
+      expect(turns.next({ ...done, now: 61_000 })).toBeNull()
+      expect(turns.deadline()).toBe(61_600)
+      expect(turns.next({ ...done, now: 61_600 })).toBe('send')
+    })
+
+    it('reads a reply that starts a moment after the work ends before sending what waited', () => {
+      const turns = waitingWords()
+      const done = { ...hearing, agentWorking: false, hasDraft: true }
+      expect(turns.next({ ...done, now: 61_000 })).toBeNull()
+      expect(turns.next({ ...done, voiceSpeaking: true, now: 61_300 })).toBeNull()
+      expect(turns.overhears()).toBe(true)
+    })
+
+    it('still lets the person stop the reply by talking over it, with words already waiting', () => {
+      const turns = waitingWords()
+      const reading = { ...hearing, agentWorking: false, hasDraft: true, voiceSpeaking: true }
+      const asked = { ...reading, interrupts: true }
+      turns.next({ ...asked, now: 61_000 })
+      expect(turns.next({ ...asked, now: 62_000 })).toBeNull()
+      expect(turns.next({ ...asked, heardOverReply: true, now: 63_000 })).toBe('interrupt-voice')
+    })
+
+    it('keeps what waited after the person stops the agent by voice, for their next words', () => {
+      const turns = waitingWords()
+      const stopped = { ...hearing, agentWorking: false, hasDraft: true, stoppedByVoice: true }
+      expect(turns.next({ ...stopped, now: 61_000 })).toBeNull()
+      expect(turns.next({ ...stopped, now: 80_000 })).toBeNull()
+      const after = { ...stopped, stoppedByVoice: false }
+      expect(turns.next({ ...after, userSpeaking: true, now: 82_000 })).toBeNull()
+      expect(turns.next({ ...after, now: 83_000 })).toBeNull()
+      expect(turns.next({ ...after, now: 84_400 })).toBe('send')
+    })
   })
 
   it('never sends for a dictation the person started somewhere else', () => {

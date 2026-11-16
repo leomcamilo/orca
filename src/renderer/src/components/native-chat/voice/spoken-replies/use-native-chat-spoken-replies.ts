@@ -42,6 +42,8 @@ export type NativeChatSpokenReplies = {
   handsFree: boolean
   /** Listening is on, but the microphone stays closed until the composer is empty. */
   waitsForEmptyComposer: boolean
+  /** The microphone is open while the agent works; what the person says waits for its end. */
+  queuesForTurnEnd: boolean
   toggle: () => void
   setHandsFree: (handsFree: boolean) => void
   /** Stops the voice; the agent's work is untouched. */
@@ -148,6 +150,7 @@ export function useNativeChatSpokenReplies(args: {
   const handsFree = useSpokenReplyMode((state) => state.handsFree[sessionId] === true) && on
   const waitsForEmptyComposer =
     useSpokenReplyMode((state) => state.waitsForEmptyComposer === sessionId) && handsFree
+  const queuesForTurnEnd = useSpokenReplyMode((state) => state.queueing === sessionId) && handsFree
   const line = useSpokenReplyLine((state) =>
     state.line?.owner === sessionId ? state.line.text : null
   )
@@ -187,6 +190,7 @@ export function useNativeChatSpokenReplies(args: {
       agentLabel,
       handsFree,
       waitsForEmptyComposer,
+      queuesForTurnEnd,
       toggle,
       setHandsFree,
       silence
@@ -199,6 +203,7 @@ export function useNativeChatSpokenReplies(args: {
       agentLabel,
       handsFree,
       waitsForEmptyComposer,
+      queuesForTurnEnd,
       toggle,
       setHandsFree,
       silence
@@ -214,16 +219,17 @@ export function useSpokenReplyJournal(journalItems: readonly AgentJournalRenderI
   const sessionId = spoken?.on ? spoken.sessionId : null
   const agentLabel = spoken?.agentLabel ?? ''
   // An open microphone would take the voice in: as dictated text, or as the person's words in a
-  // Voice mode call in any chat. The one this chat opens over its own reply drops what repeats
-  // the reply, so the reply plays on.
+  // Voice mode call in any chat. The one this chat opens over its own reply, or keeps open while
+  // its agent works, drops what repeats the reply, so the reply plays on.
   const dictating = useAppStore(
     (store) => store.dictationState === 'starting' || store.dictationState === 'listening'
   )
-  const overhearing = useSpokenReplyMode(
-    (state) => sessionId !== null && state.overhearing === sessionId
+  const listensHere = useSpokenReplyMode(
+    (state) =>
+      sessionId !== null && (state.overhearing === sessionId || state.queueing === sessionId)
   )
   const inCall = useVoiceCallPresence((state) => state.calls > 0)
-  const quiet = (dictating && !overhearing) || inCall || spoken?.visible !== true
+  const quiet = (dictating && !listensHere) || inCall || spoken?.visible !== true
   useEffect(() => {
     if (sessionId === null) {
       return

@@ -16,6 +16,7 @@ import { useDictationQueuedSend } from './use-dictation-queued-send'
 import { createDictationTranscriptDelivery } from './dictation-transcript-delivery'
 import { createDictationStoppedSessions } from './dictation-stopped-sessions'
 import { dictationSpokenEcho } from './dictation-spoken-echo'
+import { dictatedTextClaimed } from './dictation-text-claims'
 import {
   showDictationDisabledToast,
   showDictationNoModelToast,
@@ -400,7 +401,7 @@ export function DictationController() {
       dispatch({ type: 'final-text' })
       // The microphone can be open while a reply is read; the reply heard back is not the person.
       const theirs = dictationSpokenEcho.without(text, Date.now())
-      if (theirs) {
+      if (theirs && !dictatedTextClaimed(theirs)) {
         deliverRef.current?.(theirs)
       }
     },

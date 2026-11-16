@@ -340,7 +340,8 @@ export const NativeChatComposerActions = memo(function NativeChatComposerActions
                   canSend: !sendBlockedReason,
                   hasDraft,
                   onOpenMicrophone: onDictationToggle,
-                  onSend
+                  onSend,
+                  onStopTurn: onStop
                 }}
               />
             )

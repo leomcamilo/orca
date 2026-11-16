@@ -11,6 +11,8 @@ import type { NativeChatSpokenReplies } from './use-native-chat-spoken-replies'
 import { DICTATION_CONTROL_EVENT } from '@/components/dictation/dictation-control-events'
 import { publishDictationMicrophoneLevel } from '@/components/dictation/dictation-microphone-level'
 import { useSpokenReplyMode } from './spoken-reply-mode'
+import { dictatedTextClaimed } from '@/components/dictation/dictation-text-claims'
+import type { VoiceSettings } from '../../../../../../shared/speech-types'
 import { useHandsFreeTurns } from './use-hands-free-turns'
 
 // Stands in for the dictation controller, which knows where a dictation lands.
@@ -67,6 +69,7 @@ function listenForTurns() {
     agentLabel: 'Claude',
     handsFree,
     waitsForEmptyComposer: false,
+    queuesForTurnEnd: false,
     toggle: () => {},
     setHandsFree: (handsFree) => events.push(handsFree ? 'armed' : 'disarmed'),
     silence: () => events.push('silence')
@@ -81,7 +84,8 @@ function listenForTurns() {
           canSend: true,
           hasDraft,
           onOpenMicrophone: () => events.push('open microphone'),
-          onSend: () => events.push('send')
+          onSend: () => events.push('send'),
+          onStopTurn: () => events.push('stop the agent')
         },
         { current: null }
       ),
@@ -116,7 +120,8 @@ it('opens the microphone once the room settles and sends what was said after the
   expect(events).toEqual(['open microphone', 'send'])
 })
 
-it('keeps no timer while the agent works, and listens over the reply without stopping it', () => {
+it('keeps no timer while the agent works, unless asked to listen meanwhile, and listens over the reply', () => {
+  voiceSettings({ spokenReplyListenWhileWorking: false })
   const { events, rerender, speak, dictationIs, wait } = listenForTurns()
   rerender({ line: null, agentWorking: true })
   expect(vi.getTimerCount()).toBe(0)
@@ -164,17 +169,27 @@ function hear(from: number, to: number, microphone: number, output: number): voi
   })
 }
 
-function interruptBySpeaking(on: boolean): void {
+function voiceSettings(chosen: Partial<VoiceSettings>): void {
   useAppStore.setState({
-    settings: {
-      ...getDefaultSettings('/tmp'),
-      voice: { ...getDefaultVoiceSettings(), spokenReplyInterrupt: on }
-    }
+    settings: { ...getDefaultSettings('/tmp'), voice: { ...getDefaultVoiceSettings(), ...chosen } }
   })
 }
 
+it('listens while the agent works, and stops it for "para" said alone, which never lands', () => {
+  const { events, rerender, dictationIs, wait } = listenForTurns()
+  rerender({ line: null, agentWorking: true })
+  wait(600)
+  expect(events).toEqual(['open microphone'])
+  dictationIs('listening')
+  expect(useSpokenReplyMode.getState().queueing).toBe('chat-1')
+  expect(dictatedTextClaimed('Para.')).toBe(true)
+  expect(events).toEqual(['open microphone', 'stop the agent'])
+  // Inside a sentence it is what the person says, and lands in the draft.
+  expect(dictatedTextClaimed('para de ler isso')).toBe(false)
+})
+
 it('holds a voice read by an API as the person talks over it, and quiets it as they go on', () => {
-  interruptBySpeaking(true)
+  voiceSettings({ spokenReplyInterrupt: true })
   const { events, rerender, dictationIs } = listenForTurns()
   rerender({ line: 'Pronto.', agentWorking: false })
   dictationIs('listening')
@@ -189,7 +204,7 @@ it('holds a voice read by an API as the person talks over it, and quiets it as t
 })
 
 it('plays a reply on after holding it for a burst of its own echo', () => {
-  interruptBySpeaking(true)
+  voiceSettings({ spokenReplyInterrupt: true })
   const { events, rerender, dictationIs } = listenForTurns()
   rerender({ line: 'Pronto.', agentWorking: false })
   dictationIs('listening')
@@ -201,7 +216,7 @@ it('plays a reply on after holding it for a burst of its own echo', () => {
 })
 
 it('never holds a reply the person talks over unless they turned on Interrupt by speaking', () => {
-  interruptBySpeaking(false)
+  voiceSettings({ spokenReplyInterrupt: false })
   const { events, rerender, dictationIs } = listenForTurns()
   rerender({ line: 'Pronto.', agentWorking: false })
   dictationIs('listening')
