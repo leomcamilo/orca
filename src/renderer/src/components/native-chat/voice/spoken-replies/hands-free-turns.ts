@@ -15,11 +15,13 @@ export type HandsFreeFacts = {
   hasDraft: boolean
   /** Words the person says over a reply quiet it, instead of waiting for it to end. */
   interrupts: boolean
+  /** The person kept talking while the reply was held to listen, before any word landed. */
+  heardOverReply: boolean
   now: number
 }
 
 /** `overhear`: open the microphone while a reply is read, so the person can talk over it.
- *  `interrupt-voice`: words of theirs landed over the reply; quiet it. `close-unused`: nobody
+ *  `interrupt-voice`: they talked over the reply; quiet it. `close-unused`: nobody
  *  spoke into the open microphone. `close-unheard`: what it heard held no words, twice.
  *  `give-up`: it would not open. */
 export type HandsFreeAction =
@@ -242,9 +244,9 @@ export class HandsFreeTurns {
     return this.unheardSends >= 2 ? 'close-unheard' : null
   }
 
-  /** While a reply is read: the microphone stays open and the reply plays on, unless words of the
-   *  person's land and they asked to interrupt. When the reply ends, what they said goes out after
-   *  the next pause, and nothing is lost. */
+  /** While a reply is read: the microphone stays open and the reply plays on, unless the person
+   *  talks over it and asked to interrupt. When the reply ends, what they said goes out after the
+   *  next pause, and nothing is lost. */
   private overhear(
     phase: { name: 'overhearing'; since: number; heard: boolean },
     facts: HandsFreeFacts
@@ -279,7 +281,7 @@ export class HandsFreeTurns {
         : { name: 'opening', since: phase.since }
       return null
     }
-    if (mine && facts.interrupts && facts.hasDraft) {
+    if (mine && facts.interrupts && (facts.hasDraft || facts.heardOverReply)) {
       this.phase = {
         name: 'listening',
         since: now,

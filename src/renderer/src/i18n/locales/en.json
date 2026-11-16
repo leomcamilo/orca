@@ -22281,7 +22281,7 @@
           "sampleText": "This is how replies will sound.",
           "automaticVoice": "Automatic",
           "interruptLabel": "Interrupt by speaking",
-          "interruptDescription": "While a chat listens for your turn, the microphone stays open as a reply is read, and what you say is sent when the reply ends. With this on, your words stop the reply at once. Words that repeat the reply are dropped as its echo, but a voice played through speakers can still stop itself.",
+          "interruptDescription": "While a chat listens for your turn, the microphone stays open as a reply is read, and what you say is sent when the reply ends. With this on, talking over a reply read by OpenAI, ElevenLabs or your speech server pauses it at once, and it stops if you keep talking; through speakers, a loud sound can pause it for a moment. The system voice stops once your words reach the draft.",
           "providerLabel": "Read by",
           "providerDescription": "The system voice runs on this computer. The others receive the text they read.",
           "providerSystem": "System voice",

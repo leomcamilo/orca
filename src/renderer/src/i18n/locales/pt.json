@@ -22463,7 +22463,7 @@
           "sampleText": "É assim que as respostas vão soar.",
           "automaticVoice": "Automática",
           "interruptLabel": "Interromper falando",
-          "interruptDescription": "Enquanto um chat escuta a sua vez, o microfone fica aberto durante a leitura e o que você disser é enviado quando a resposta termina. Com isto ligado, suas palavras param a leitura na hora. O que repete a resposta é descartado como eco, mas uma voz tocada no alto-falante ainda pode interromper a si mesma.",
+          "interruptDescription": "Enquanto um chat escuta a sua vez, o microfone fica aberto durante a leitura e o que você disser é enviado quando a resposta termina. Com isto ligado, falar por cima de uma resposta lida pela OpenAI, pela ElevenLabs ou pelo seu servidor de voz pausa a leitura na hora, e ela para se você continuar falando; no alto-falante, um som alto pode pausá-la por um instante. A voz do sistema para quando suas palavras chegam ao rascunho.",
           "providerLabel": "Quem lê",
           "providerDescription": "A voz do sistema roda neste computador. As outras recebem o texto que vão ler.",
           "providerSystem": "Voz do sistema",

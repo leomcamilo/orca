@@ -9,6 +9,7 @@ import {
 } from '@/components/dictation/dictation-meter-store'
 import type { NativeChatSpokenReplies } from './use-native-chat-spoken-replies'
 import { DICTATION_CONTROL_EVENT } from '@/components/dictation/dictation-control-events'
+import { publishDictationMicrophoneLevel } from '@/components/dictation/dictation-microphone-level'
 import { useSpokenReplyMode } from './spoken-reply-mode'
 import { useHandsFreeTurns } from './use-hands-free-turns'
 
@@ -16,6 +17,14 @@ import { useHandsFreeTurns } from './use-hands-free-turns'
 const dictation = { landsHere: true }
 vi.mock('@/components/dictation/use-dictation-queued-send', () => ({
   dictationLandsInComposerOf: () => dictation.landsHere
+}))
+
+// Stands in for a voice read by an API, which plays on this page.
+const voice = { sounding: true, output: 0.1, holds: [] as boolean[] }
+vi.mock('./spoken-reply-api-voice', () => ({
+  spokenReplyAudioSounding: () => voice.sounding,
+  spokenReplyOutputLevel: () => voice.output,
+  holdSpokenReplyAudio: (held: boolean) => voice.holds.push(held)
 }))
 
 // What the turn asks of the dictation controller.
@@ -29,6 +38,8 @@ const recordControl = (event: Event): void => {
 beforeEach(() => {
   vi.useFakeTimers()
   dictation.landsHere = true
+  voice.sounding = true
+  voice.holds.length = 0
   controls.length = 0
   document.addEventListener(DICTATION_CONTROL_EVENT, recordControl)
 })
@@ -140,6 +151,63 @@ it('stops the reply for words of the person once they turn on Interrupt by speak
   expect(events).toEqual(['open microphone'])
   rerender({ line: 'Pronto.', agentWorking: false, hasDraft: true })
   expect(events).toEqual(['open microphone', 'silence'])
+})
+
+/** Microphone windows from `from` to `to` ms, with the voice playing `output` meanwhile. */
+function hear(from: number, to: number, microphone: number, output: number): void {
+  act(() => {
+    for (let now = from; now < to; now += 50) {
+      voice.output = output
+      publishDictationMicrophoneLevel(microphone, now)
+    }
+  })
+}
+
+function interruptBySpeaking(on: boolean): void {
+  useAppStore.setState({
+    settings: {
+      ...getDefaultSettings('/tmp'),
+      voice: { ...getDefaultVoiceSettings(), spokenReplyInterrupt: on }
+    }
+  })
+}
+
+it('holds a voice read by an API as the person talks over it, and quiets it as they go on', () => {
+  interruptBySpeaking(true)
+  const { events, rerender, dictationIs } = listenForTurns()
+  rerender({ line: 'Pronto.', agentWorking: false })
+  dictationIs('listening')
+  // Its own echo, after the browser's echo cancellation, plays on.
+  hear(0, 1000, 0.04, 0.1)
+  expect(voice.holds).toEqual([])
+  hear(1000, 1100, 0.3, 0.1)
+  expect(voice.holds).toEqual([true])
+  expect(events).toEqual(['open microphone'])
+  hear(1100, 1250, 0.25, 0)
+  expect(events).toEqual(['open microphone', 'silence'])
+})
+
+it('plays a reply on after holding it for a burst of its own echo', () => {
+  interruptBySpeaking(true)
+  const { events, rerender, dictationIs } = listenForTurns()
+  rerender({ line: 'Pronto.', agentWorking: false })
+  dictationIs('listening')
+  hear(0, 1000, 0.04, 0.1)
+  hear(1000, 1100, 0.2, 0.1)
+  hear(1100, 1600, 0.003, 0)
+  expect(voice.holds).toEqual([true, false])
+  expect(events).toEqual(['open microphone'])
+})
+
+it('never holds a reply the person talks over unless they turned on Interrupt by speaking', () => {
+  interruptBySpeaking(false)
+  const { events, rerender, dictationIs } = listenForTurns()
+  rerender({ line: 'Pronto.', agentWorking: false })
+  dictationIs('listening')
+  hear(0, 1000, 0.04, 0.1)
+  hear(1000, 1500, 0.3, 0.1)
+  expect(voice.holds).toEqual([])
+  expect(events).toEqual(['open microphone'])
 })
 
 it('leaves a dictation that lands elsewhere alone, and closes a microphone nobody talks into', () => {

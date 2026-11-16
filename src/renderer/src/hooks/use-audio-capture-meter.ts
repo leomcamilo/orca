@@ -9,6 +9,7 @@ import {
   type DictationMeterAnalyzerState,
   type DictationMeterState
 } from '../../../shared/dictation-audio-meter'
+import { publishDictationMicrophoneLevel } from '@/components/dictation/dictation-microphone-level'
 
 export type DictationMeterPublisher = (meter: DictationMeterState) => void
 
@@ -25,11 +26,9 @@ export function useAudioCaptureMeter(publishMeter?: DictationMeterPublisher) {
   // The worklet sends one level per 50 ms window, which paces publishing.
   const measureLevel = useCallback(
     (level: DictationAudioLevel) => {
-      analyzerRef.current = analyzeDictationAudioLevel(
-        level,
-        performance.now(),
-        analyzerRef.current
-      )
+      const now = performance.now()
+      publishDictationMicrophoneLevel(level.rms, now)
+      analyzerRef.current = analyzeDictationAudioLevel(level, now, analyzerRef.current)
       if (document.hidden) {
         return
       }

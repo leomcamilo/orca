@@ -9,7 +9,8 @@ const quiet: Omit<HandsFreeFacts, 'now'> = {
   voiceSpeaking: false,
   canSend: true,
   hasDraft: false,
-  interrupts: false
+  interrupts: false,
+  heardOverReply: false
 }
 const mine: Omit<HandsFreeFacts, 'now'> = { ...quiet, dictation: 'listening', ownsDictation: true }
 const elsewhere: Omit<HandsFreeFacts, 'now'> = { ...quiet, dictation: 'listening' }
@@ -84,6 +85,25 @@ describe('HandsFreeTurns', () => {
     )
     expect(stops.next({ ...interrupts, hasDraft: true, now: 2100 })).toBeNull()
     expect(stops.next({ ...interrupts, hasDraft: true, now: 3400 })).toBe('send')
+  })
+
+  it('stops a reply as soon as the person is heard over it, before any word lands', () => {
+    const waits = new HandsFreeTurns()
+    waits.next({ ...quiet, voiceSpeaking: true, now: 0 })
+    waits.next({ ...mine, voiceSpeaking: true, now: 300 })
+    expect(waits.next({ ...mine, voiceSpeaking: true, heardOverReply: true, now: 1000 })).toBeNull()
+    expect(waits.overhears()).toBe(true)
+
+    const interrupts = { ...mine, interrupts: true }
+    const stops = new HandsFreeTurns()
+    stops.next({ ...quiet, interrupts: true, voiceSpeaking: true, now: 0 })
+    stops.next({ ...interrupts, voiceSpeaking: true, now: 300 })
+    expect(
+      stops.next({ ...interrupts, voiceSpeaking: true, heardOverReply: true, now: 1000 })
+    ).toBe('interrupt-voice')
+    // What they said lands as they go on, and goes out after their pause.
+    expect(stops.next({ ...interrupts, hasDraft: true, now: 2000 })).toBeNull()
+    expect(stops.next({ ...interrupts, hasDraft: true, now: 2400 })).toBe('send')
   })
 
   it('never sends for a dictation the person started somewhere else', () => {

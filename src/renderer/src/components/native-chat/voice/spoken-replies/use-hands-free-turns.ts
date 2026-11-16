@@ -8,8 +8,9 @@ import { dictationLandsInComposerOf } from '@/components/dictation/use-dictation
 import { isDictationUnderway } from '../../../../../../shared/dictation-session-machine'
 import { useVoiceCallPresence } from '../voice-call-presence'
 import { HANDS_FREE_NO_SPEECH_MS, HandsFreeTurns } from './hands-free-turns'
-import { setOverhearing, setWaitsForEmptyComposer } from './spoken-reply-mode'
+import { setOverhearing, setWaitsForEmptyComposer, useSpokenReplyMode } from './spoken-reply-mode'
 import type { NativeChatSpokenReplies } from './use-native-chat-spoken-replies'
+import { useSpokenReplyBargeIn } from './use-spoken-reply-barge-in'
 
 export type NativeChatHandsFreeComposer = {
   dictationUnavailable: boolean
@@ -41,8 +42,20 @@ export function useHandsFreeTurns(
   const canSend = composer.canSend && !composer.dictationUnavailable && !inCall
   const interrupts = useAppStore((store) => store.settings?.voice?.spokenReplyInterrupt === true)
   const turns = useRef<HandsFreeTurns | null>(null)
-  // Moved by the timer alone, to look again at the turn's next deadline.
+  // Moved by the timer, or by the person heard over the reply, to look at the turn again.
   const [woken, setWoken] = useState(0)
+  const armed = spoken.handsFree
+  const { sessionId } = spoken
+  const overhearing = useSpokenReplyMode((state) => state.overhearing === sessionId)
+  // The person kept talking with the reply held; the turn takes it in once.
+  const heardOverReply = useRef(false)
+  useSpokenReplyBargeIn(
+    armed && interrupts && overhearing && voiceSpeaking && dictation === 'listening',
+    () => {
+      heardOverReply.current = true
+      setWoken((count) => count + 1)
+    }
+  )
 
   const look = useEffectEvent((): number | null => {
     const action = turns.current?.next({
@@ -54,8 +67,12 @@ export function useHandsFreeTurns(
       canSend,
       hasDraft: composer.hasDraft,
       interrupts,
+      heardOverReply: heardOverReply.current,
       now: Date.now()
     })
+    if (turns.current?.overhears() !== true) {
+      heardOverReply.current = false
+    }
     if (action === 'overhear') {
       // Marked before the microphone opens, so its dictation does not quiet the reply.
       setOverhearing(spoken.sessionId, true)
@@ -98,8 +115,6 @@ export function useHandsFreeTurns(
     return turns.current?.deadline() ?? null
   })
 
-  const armed = spoken.handsFree
-  const { sessionId } = spoken
   useEffect(() => {
     if (!armed) {
       return
