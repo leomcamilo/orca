@@ -35,6 +35,9 @@ export function createVoiceCredentialStore(
         if (separator === -1 || (kind !== 'encrypted' && kind !== 'plaintext')) {
           throw new Error(`${options.providerLabel} API key could not be decrypted`)
         }
+        if (kind === 'encrypted' && !getSecretStore().isEncryptionAvailable()) {
+          throw new Error(`${options.providerLabel} API key could not be decrypted`)
+        }
         const payload = Buffer.from(rest.slice(separator + 1), 'base64')
         cached =
           kind === 'plaintext' ? payload.toString('utf8') : getSecretStore().decryptString(payload)

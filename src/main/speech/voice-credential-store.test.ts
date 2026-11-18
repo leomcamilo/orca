@@ -171,3 +171,11 @@ it('keeps a newly saved server key when concurrent edits omit it, and clears aft
   await Promise.all([saving, clearing])
   expect(await readOpenAiCompatibleSpeechVoice()).toBe(null)
 })
+
+it('refuses sealed credentials when the host cannot decrypt without rewriting the file', async () => {
+  createEncryptedApiKeyFileStore(options).save('sealed-value')
+  const sealed = readFileSync(path())
+  setSecretStore({ ...secrets, isEncryptionAvailable: () => false })
+  await expect(store().read()).rejects.toThrow('could not be decrypted')
+  expect(readFileSync(path())).toEqual(sealed)
+})
