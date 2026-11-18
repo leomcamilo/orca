@@ -25,6 +25,7 @@ beforeEach(async () => {
   })
   setStructuredAgentSessionHost(rig.host)
   await foundRestTestChat(rig)
+  await rig.host.collaboratorsForTests().conversationDelivery.loop.wake(SESSION)
   // Idle stop puts the chat to rest: no agent until something starts one.
   rig.clock.now += IDLE_MS + 1
   await sweepOnce(rig.host)
