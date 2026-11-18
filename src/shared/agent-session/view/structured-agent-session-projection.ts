@@ -36,6 +36,7 @@ import {
 import type { NativeChatBlock, NativeChatMessage } from '../../native-chat/native-chat-types'
 import { sha256 } from '../../hashing/sha256'
 import { readAgentMessageSource } from '../journal/agent-session-message-source'
+import { blocksWithoutSpokenReplyRequest } from '../../native-chat/spoken-replies/spoken-reply-request'
 import { structuredAgentSessionStatusStartedAt } from './structured-agent-session-status-started-at'
 import { owesStructuredAgentSessionWork } from './structured-agent-session-owed-work'
 import type { StructuredAgentSessionWorkScope } from './structured-agent-session-main-agent-working'
@@ -77,7 +78,7 @@ function itemBlocks(item: AgentJournalRenderItem): {
 } | null {
   const body = item.body
   if (body.kind === 'message') {
-    return { role: body.role, blocks: body.blocks }
+    return { role: body.role, blocks: blocksWithoutSpokenReplyRequest(body.blocks) }
   }
   if (isStructuredAgentSessionToolAction(body)) {
     const call = structuredAgentSessionToolCallBlock(body, item.itemId)

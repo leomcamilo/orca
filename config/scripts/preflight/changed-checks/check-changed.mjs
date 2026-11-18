@@ -134,7 +134,9 @@ function buildTasks(root, plan, { files, mergeBase, maxWorkers, bun }) {
   }
   const related = plan.unitTests.related.filter((file) => existsSync(path.join(root, file)))
   const colocated = plan.unitTests.colocated.filter((file) => existsSync(path.join(root, file)))
-  if (related.length > 0 || colocated.length > 0) {
+  // Orca Leo's workflow runs its own budgeted unit tests beside this gate.
+  const unitTestsElsewhere = process.env.ORCA_GATE_UNIT_TESTS === 'elsewhere'
+  if (!unitTestsElsewhere && (related.length > 0 || colocated.length > 0)) {
     const vitest = (selection) =>
       step(node, [
         'config/scripts/test-runtime/execution-policy/run-vitest.mjs',

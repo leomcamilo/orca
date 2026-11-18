@@ -1,5 +1,13 @@
 import type { SecretAtRestProtection } from '../../../shared/secure-storage/secret-at-rest-protection'
 import type { DictationCleanupResult } from '../../../shared/speech/dictation/dictation-cleanup'
+import type {
+  ElevenLabsVoiceListing,
+  OpenAiCompatibleSpeechVoiceProvider,
+  OpenAiCompatibleSpeechVoiceProviderSummary,
+  SpeechSynthesisRequest,
+  SpeechSynthesisResult,
+  SpeechSynthesisUsage
+} from '../../../shared/speech-synthesis'
 import { ipcRenderer } from 'electron'
 import type {
   DictationContext,
@@ -108,6 +116,38 @@ export const speechApi = {
     ipcRenderer.invoke('speech:cleanUpDictation', { text, context, requestId }),
   cancelDictationCleanup: (requestId: string): Promise<void> =>
     ipcRenderer.invoke('speech:cancelDictationCleanup', requestId),
+
+  synthesizeSpeech: (request: SpeechSynthesisRequest): Promise<SpeechSynthesisResult> =>
+    ipcRenderer.invoke('speech:synthesizeSpeech', request),
+
+  cancelSpeechSynthesis: (requestId: string): Promise<void> =>
+    ipcRenderer.invoke('speech:cancelSpeechSynthesis', requestId),
+
+  getSpeechSynthesisUsage: (): Promise<SpeechSynthesisUsage> =>
+    ipcRenderer.invoke('speech:getSpeechSynthesisUsage'),
+
+  getElevenLabsKeyStatus: (): Promise<{ configured: boolean }> =>
+    ipcRenderer.invoke('speech:getElevenLabsKeyStatus'),
+
+  saveElevenLabsApiKey: (apiKey: string): Promise<{ configured: boolean }> =>
+    ipcRenderer.invoke('speech:saveElevenLabsApiKey', apiKey),
+
+  clearElevenLabsApiKey: (): Promise<{ configured: boolean }> =>
+    ipcRenderer.invoke('speech:clearElevenLabsApiKey'),
+
+  listElevenLabsVoices: (): Promise<ElevenLabsVoiceListing> =>
+    ipcRenderer.invoke('speech:listElevenLabsVoices'),
+
+  getOpenAiCompatibleSpeechVoice: (): Promise<OpenAiCompatibleSpeechVoiceProviderSummary | null> =>
+    ipcRenderer.invoke('speech:getOpenAiCompatibleSpeechVoice'),
+
+  saveOpenAiCompatibleSpeechVoice: (
+    provider: OpenAiCompatibleSpeechVoiceProvider
+  ): Promise<OpenAiCompatibleSpeechVoiceProviderSummary | null> =>
+    ipcRenderer.invoke('speech:saveOpenAiCompatibleSpeechVoice', provider),
+
+  clearOpenAiCompatibleSpeechVoice: (): Promise<void> =>
+    ipcRenderer.invoke('speech:clearOpenAiCompatibleSpeechVoice'),
 
   onPartialTranscript: (callback: (data: SpeechTranscriptEvent) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, data: SpeechTranscriptEvent): void =>

@@ -9,6 +9,7 @@ import { abortWhenRendererGone } from './renderer-requests/renderer-lifetime-abo
 import { dictationTermsFor } from '../../shared/speech/dictation/dictation-dictionary'
 import { dictationTextSettingsFor } from '../../shared/speech/dictation/dictation-cleanup'
 import { SPEECH_MODEL_CATALOG } from '../speech/model-catalog'
+import { registerSpeechSynthesisHandlers } from './speech-synthesis'
 import { deleteLocalSpeechModel } from '../speech/speech-model-deletion'
 import { getSpeechModelManager, getSpeechSttService } from '../speech/speech-runtime-service'
 import {
@@ -71,6 +72,8 @@ export function registerSpeechHandlers(
       cancelDictationCleanup(requestId)
     }
   })
+
+  registerSpeechSynthesisHandlers(store)
 
   ipcMain.handle('speech:getCatalog', () => {
     return SPEECH_MODEL_CATALOG

@@ -5,6 +5,7 @@ import {
 import { capOpenCodeHookText } from './listener-limits'
 import type { HookListenerState } from './listener-state'
 import type { ToolSnapshot } from './listener-event'
+import { withoutSpokenReplyRequest } from '../native-chat/spoken-replies/spoken-reply-request'
 
 export type ExtractedPromptText = {
   text: string
@@ -95,9 +96,10 @@ export function shouldIgnoreCompactContinuationUserPromptSubmit(
 export function resolvePrompt(
   state: HookListenerState,
   paneKey: string,
-  promptText: string,
+  sentText: string,
   options?: { resetOnNewTurn?: boolean }
 ): string {
+  const promptText = withoutSpokenReplyRequest(sentText)
   // Known harness turns retain the user prompt; unknown tags still open real turns.
   if (isKnownHarnessInjectedUserTurnText(promptText)) {
     return state.lastPromptByPaneKey.get(paneKey) ?? ''
