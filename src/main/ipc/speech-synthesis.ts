@@ -65,19 +65,19 @@ export function registerSpeechSynthesisHandlers(store: Store): void {
     trusted(event)
     return speechSynthesisUsage.read()
   })
-  ipcMain.handle('speech:getElevenLabsKeyStatus', (event) => {
+  ipcMain.handle('speech:getElevenLabsKeyStatus', async (event) => {
     trusted(event)
-    return { configured: hasElevenLabsApiKey() }
+    return { configured: await hasElevenLabsApiKey() }
   })
-  ipcMain.handle('speech:saveElevenLabsApiKey', (event, apiKey: unknown) => {
+  ipcMain.handle('speech:saveElevenLabsApiKey', async (event, apiKey: unknown) => {
     trusted(event)
-    saveElevenLabsApiKey(apiKey)
-    return { configured: hasElevenLabsApiKey() }
+    await saveElevenLabsApiKey(apiKey)
+    return { configured: await hasElevenLabsApiKey() }
   })
-  ipcMain.handle('speech:clearElevenLabsApiKey', (event) => {
+  ipcMain.handle('speech:clearElevenLabsApiKey', async (event) => {
     trusted(event)
-    clearElevenLabsApiKey()
-    return { configured: hasElevenLabsApiKey() }
+    await clearElevenLabsApiKey()
+    return { configured: await hasElevenLabsApiKey() }
   })
   ipcMain.handle('speech:listElevenLabsVoices', (event) => {
     trusted(event)
@@ -87,13 +87,13 @@ export function registerSpeechSynthesisHandlers(store: Store): void {
     trusted(event)
     return summarizeOpenAiCompatibleSpeechVoice()
   })
-  ipcMain.handle('speech:saveOpenAiCompatibleSpeechVoice', (event, input: unknown) => {
+  ipcMain.handle('speech:saveOpenAiCompatibleSpeechVoice', async (event, input: unknown) => {
     trusted(event)
-    saveOpenAiCompatibleSpeechVoice(input)
+    await saveOpenAiCompatibleSpeechVoice(input)
     return summarizeOpenAiCompatibleSpeechVoice()
   })
-  ipcMain.handle('speech:clearOpenAiCompatibleSpeechVoice', (event) => {
+  ipcMain.handle('speech:clearOpenAiCompatibleSpeechVoice', async (event) => {
     trusted(event)
-    clearOpenAiCompatibleSpeechVoice()
+    await clearOpenAiCompatibleSpeechVoice()
   })
 }

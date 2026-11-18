@@ -8,8 +8,7 @@ import { createSpeechSynthesisUsageLedger } from './speech-synthesis-usage'
 
 const key = { saved: true }
 vi.mock('./openai-api-key-store', () => ({
-  hasOpenAiSpeechApiKey: () => key.saved,
-  readOpenAiSpeechApiKey: () => 'sk-test-secret-key'
+  readOpenAiSpeechApiKeyAsync: async () => (key.saved ? 'sk-test-secret-key' : null)
 }))
 vi.mock('./openai-compatible-speech-voice-store', () => ({
   readOpenAiCompatibleSpeechVoice: () => ({

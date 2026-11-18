@@ -1,6 +1,6 @@
 import { getMainHttpClient } from '../network/http-client'
 import { readSpeechAudio } from './speech-audio-response'
-import { hasOpenAiSpeechApiKey, readOpenAiSpeechApiKey } from './openai-api-key-store'
+import { readOpenAiSpeechApiKeyAsync } from './openai-api-key-store'
 import {
   readOpenAiErrorMessage,
   type OpenAiTranscriptionResponse
@@ -69,13 +69,13 @@ export async function synthesizeOpenAiSpeech(
   request: { text: string; voice: string },
   signal: AbortSignal
 ): Promise<SpeechSynthesisResult> {
-  if (!hasOpenAiSpeechApiKey()) {
+  let apiKey: string | null
+  try {
+    apiKey = await readOpenAiSpeechApiKeyAsync()
+  } catch {
     return { ok: false, failure: 'no-key' }
   }
-  let apiKey: string
-  try {
-    apiKey = readOpenAiSpeechApiKey()
-  } catch {
+  if (!apiKey) {
     return { ok: false, failure: 'no-key' }
   }
   return postSpeech(
@@ -97,9 +97,9 @@ export async function synthesizeOpenAiCompatibleSpeech(
   request: { text: string },
   signal: AbortSignal
 ): Promise<SpeechSynthesisResult> {
-  let server: ReturnType<typeof readOpenAiCompatibleSpeechVoice>
+  let server: Awaited<ReturnType<typeof readOpenAiCompatibleSpeechVoice>>
   try {
-    server = readOpenAiCompatibleSpeechVoice()
+    server = await readOpenAiCompatibleSpeechVoice()
   } catch {
     server = null
   }

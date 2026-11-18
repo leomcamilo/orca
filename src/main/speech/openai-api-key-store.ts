@@ -1,3 +1,4 @@
+import { readFile, access } from 'node:fs/promises'
 import { getSecretStore } from '../../shared/secure-storage/secret-store'
 import { readCredentialFileProtection } from '../credentials/credential-file-protection'
 import {
@@ -14,6 +15,7 @@ type StoredOpenAiKey = {
 
 const OPENAI_SPEECH_TOKEN_FILE = 'openai-speech-token.enc'
 let cachedOpenAiSpeechApiKey: string | null = null
+let keyRevision = 0
 
 function getOrcaDir(): string {
   return join(homedir(), '.orca')
@@ -79,6 +81,7 @@ export function saveOpenAiSpeechApiKey(apiKey: string): void {
     throw new Error('OpenAI API key is required')
   }
   ensureOrcaDir()
+  keyRevision += 1
   if (getSecretStore().isEncryptionAvailable()) {
     writeFileSync(getOpenAiKeyPath(), getSecretStore().encryptString(trimmed), { mode: 0o600 })
     cachedOpenAiSpeechApiKey = trimmed
@@ -138,6 +141,44 @@ function decryptOrLegacyPlaintext(raw: Buffer): string {
 }
 
 export function clearOpenAiSpeechApiKey(): void {
+  keyRevision += 1
   cachedOpenAiSpeechApiKey = null
   rmSync(getOpenAiKeyPath(), { force: true })
+}
+
+/** Speech synthesis reads the same credential without blocking the event loop. */
+export async function readOpenAiSpeechApiKeyAsync(): Promise<string | null> {
+  const revision = keyRevision
+  try {
+    await access(getOpenAiKeyPath())
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      return null
+    }
+    throw error
+  }
+  if (cachedOpenAiSpeechApiKey !== null) {
+    return cachedOpenAiSpeechApiKey
+  }
+  const raw = await readFile(getOpenAiKeyPath())
+  if (revision !== keyRevision) {
+    return readOpenAiSpeechApiKeyAsync()
+  }
+  let legacy: unknown
+  try {
+    legacy = JSON.parse(raw.toString('utf8'))
+  } catch {
+    legacy = null
+  }
+  cachedOpenAiSpeechApiKey =
+    legacy &&
+    typeof legacy === 'object' &&
+    'encryptedKeyBase64' in legacy &&
+    typeof legacy.encryptedKeyBase64 === 'string' &&
+    legacy.encryptedKeyBase64 !== ''
+      ? getSecretStore().decryptString(Buffer.from(legacy.encryptedKeyBase64, 'base64'))
+      : getSecretStore().isEncryptionAvailable()
+        ? decryptOrLegacyPlaintext(raw)
+        : plaintextOnly(raw)
+  return cachedOpenAiSpeechApiKey
 }

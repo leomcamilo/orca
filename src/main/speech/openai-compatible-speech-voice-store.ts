@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { isIP } from 'node:net'
-import { createEncryptedApiKeyFileStore } from '../credentials/encrypted-api-key-file-store'
+import { createVoiceCredentialStore } from './voice-credential-store'
 import type {
   OpenAiCompatibleSpeechVoiceProvider,
   OpenAiCompatibleSpeechVoiceProviderSummary
@@ -8,11 +8,10 @@ import type {
 
 // URL, model, voice and key are sealed together so a key is only ever sent to the host it was
 // saved for. Apart from the transcription provider: a speech server is often another machine.
-const store = createEncryptedApiKeyFileStore({
+const store = createVoiceCredentialStore({
   fileName: 'openai-compatible-speech-voice.enc',
   envelopePrefix: 'orca-openai-compatible-speech-voice:v1:',
-  providerLabel: 'OpenAI-compatible voice server',
-  logScope: 'speech'
+  providerLabel: 'OpenAI-compatible voice server'
 })
 
 const SPEECH_PATH = '/audio/speech'
@@ -74,14 +73,14 @@ export function openAiCompatibleSpeechUrl(baseUrl: string): string {
   return url.toString()
 }
 
-export function readOpenAiCompatibleSpeechVoice(): OpenAiCompatibleSpeechVoiceProvider | null {
-  const raw = store.has() ? store.read() : null
+export async function readOpenAiCompatibleSpeechVoice(): Promise<OpenAiCompatibleSpeechVoiceProvider | null> {
+  const raw = (await store.has()) ? await store.read() : null
   return raw === null ? null : providerSchema.parse(JSON.parse(raw))
 }
 
-export function summarizeOpenAiCompatibleSpeechVoice(): OpenAiCompatibleSpeechVoiceProviderSummary | null {
+export async function summarizeOpenAiCompatibleSpeechVoice(): Promise<OpenAiCompatibleSpeechVoiceProviderSummary | null> {
   try {
-    const provider = readOpenAiCompatibleSpeechVoice()
+    const provider = await readOpenAiCompatibleSpeechVoice()
     return provider
       ? {
           baseUrl: provider.baseUrl,
@@ -95,9 +94,9 @@ export function summarizeOpenAiCompatibleSpeechVoice(): OpenAiCompatibleSpeechVo
   }
 }
 
-function savedKeyFor(baseUrl: string): string {
+async function savedKeyFor(baseUrl: string): Promise<string> {
   try {
-    const saved = readOpenAiCompatibleSpeechVoice()
+    const saved = await readOpenAiCompatibleSpeechVoice()
     return saved !== null &&
       openAiCompatibleSpeechUrl(saved.baseUrl) === openAiCompatibleSpeechUrl(baseUrl)
       ? saved.apiKey
@@ -108,7 +107,7 @@ function savedKeyFor(baseUrl: string): string {
 }
 
 /** A blank key keeps the saved one only while the URL is unchanged. */
-export function saveOpenAiCompatibleSpeechVoice(input: unknown): void {
+async function saveProvider(input: unknown): Promise<void> {
   const parsed = providerSchema.parse(input)
   const baseUrl = parsed.baseUrl.trim()
   const model = parsed.model.trim()
@@ -117,9 +116,23 @@ export function saveOpenAiCompatibleSpeechVoice(input: unknown): void {
   if (!model || !voice) {
     throw new Error('Enter the model and voice names the server expects')
   }
-  store.save(
-    JSON.stringify({ baseUrl, model, voice, apiKey: parsed.apiKey.trim() || savedKeyFor(baseUrl) })
+  await store.save(
+    JSON.stringify({
+      baseUrl,
+      model,
+      voice,
+      apiKey: parsed.apiKey.trim() || (await savedKeyFor(baseUrl))
+    })
   )
 }
 
-export const clearOpenAiCompatibleSpeechVoice = store.clear
+let changes: Promise<void> = Promise.resolve()
+function changeProvider(operation: () => Promise<void>): Promise<void> {
+  const next = changes.then(operation, operation)
+  changes = next.catch(() => undefined)
+  return next
+}
+
+export const saveOpenAiCompatibleSpeechVoice = (input: unknown): Promise<void> =>
+  changeProvider(() => saveProvider(input))
+export const clearOpenAiCompatibleSpeechVoice = (): Promise<void> => changeProvider(store.clear)

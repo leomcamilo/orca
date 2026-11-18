@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { setMainHttpClient } from '../network/http-client'
 import { listElevenLabsVoices, synthesizeElevenLabsSpeech } from './elevenlabs-speech'
 
-vi.mock('../credentials/encrypted-api-key-file-store', () => ({
-  createEncryptedApiKeyFileStore: () => ({
+vi.mock('./voice-credential-store', () => ({
+  createVoiceCredentialStore: () => ({
     has: () => true,
     read: () => 'xi-test-secret-key',
     save: () => {},

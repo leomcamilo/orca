@@ -1,4 +1,4 @@
-import { createEncryptedApiKeyFileStore } from '../credentials/encrypted-api-key-file-store'
+import { createVoiceCredentialStore } from './voice-credential-store'
 import { getMainHttpClient } from '../network/http-client'
 import { readSpeechAudio } from './speech-audio-response'
 import { sanitizeOpenAiTranscriptionErrorMessage } from './openai-transcription-client'
@@ -8,29 +8,28 @@ import type {
   SpeechSynthesisResult
 } from '../../shared/speech-synthesis'
 
-const store = createEncryptedApiKeyFileStore({
+const store = createVoiceCredentialStore({
   fileName: 'elevenlabs-speech-key.enc',
   envelopePrefix: 'orca-elevenlabs-speech:v1:',
-  providerLabel: 'ElevenLabs',
-  logScope: 'speech'
+  providerLabel: 'ElevenLabs'
 })
 
 export const hasElevenLabsApiKey = store.has
 export const clearElevenLabsApiKey = store.clear
 
-export function saveElevenLabsApiKey(apiKey: unknown): void {
+export async function saveElevenLabsApiKey(apiKey: unknown): Promise<void> {
   if (typeof apiKey !== 'string' || apiKey.trim() === '') {
     throw new Error('ElevenLabs API key is required')
   }
-  store.save(apiKey.trim())
+  await store.save(apiKey.trim())
 }
 
 const API = 'https://api.elevenlabs.io'
 const VOICE_ID = /^[A-Za-z0-9]{8,64}$/
 
-function readKey(): string | null {
+async function readKey(): Promise<string | null> {
   try {
-    return store.has() ? store.read() : null
+    return (await store.has()) ? await store.read() : null
   } catch {
     return null
   }
@@ -88,7 +87,7 @@ export async function synthesizeElevenLabsSpeech(
   request: { text: string; voice: string; model: string },
   signal: AbortSignal
 ): Promise<SpeechSynthesisResult> {
-  const apiKey = readKey()
+  const apiKey = await readKey()
   if (!apiKey) {
     return { ok: false, failure: 'no-key' }
   }
@@ -116,7 +115,7 @@ export async function synthesizeElevenLabsSpeech(
 
 /** The voices this ElevenLabs account can use, by name. */
 export async function listElevenLabsVoices(): Promise<ElevenLabsVoiceListing> {
-  const apiKey = readKey()
+  const apiKey = await readKey()
   if (!apiKey) {
     return { ok: false, failure: 'no-key' }
   }
