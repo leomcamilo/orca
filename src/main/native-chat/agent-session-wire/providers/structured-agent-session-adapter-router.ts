@@ -1,3 +1,4 @@
+import { routeVoiceConversation } from './structured-agent-session-voice-route'
 import type { StructuredAgentSessionAtRestCommands } from '../options/structured-agent-session-at-rest-commands'
 import type { AgentChatPermissionChoice } from '../../../../shared/agent-launch/permissions/agent-chat-permission-mode'
 import type { AgentSessionJournalIdentity } from '../../../../shared/agent-session/journal/agent-session-journal-identity'
@@ -151,15 +152,7 @@ export class StructuredAgentSessionAdapterRouter implements Adapter {
 
   confirmIdle = (id: string) => this.liveOwnerOrNull(id)?.confirmIdle?.(id)
 
-  /** Only a live child can carry a voice session; a resting chat refuses rather than starting one. */
-  startVoiceConversation: NonNullable<Adapter['startVoiceConversation']> = (input) => {
-    const owner = this.liveOwnerOrNull(input.sessionId)
-    if (!owner?.startVoiceConversation) {
-      input.emit({ type: 'refused', reason: owner ? 'unsupported' : 'not-running' })
-      return { stop: () => {} }
-    }
-    return owner.startVoiceConversation(input)
-  }
+  startVoiceConversation = routeVoiceConversation((id) => this.liveOwnerOrNull(id))
 
   listVoiceConversationVoices = async (sessionId: string): Promise<string[] | null> =>
     (await this.liveOwnerOrNull(sessionId)?.listVoiceConversationVoices?.(sessionId)) ?? null
