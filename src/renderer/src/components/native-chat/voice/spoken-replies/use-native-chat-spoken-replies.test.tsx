@@ -2,7 +2,10 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '@/store'
-import { getDefaultSettings, getDefaultVoiceSettings } from '../../../../../../shared/orca-profiles/constants'
+import {
+  getDefaultSettings,
+  getDefaultVoiceSettings
+} from '../../../../../../shared/orca-profiles/constants'
 import type { AgentJournalRenderItem } from '../../../../../../shared/agent-session/journal/agent-session-journal-types'
 import { holdVoiceCallPresence } from '../voice-call-presence'
 import { NativeChatSpokenRepliesProvider } from './NativeChatSpokenRepliesProvider'

@@ -3,7 +3,10 @@ import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '@/store'
 import { useNativeChatCodexVoice } from './use-native-chat-codex-voice'
-import { getDefaultSettings, getDefaultVoiceSettings } from '../../../../../shared/orca-profiles/constants'
+import {
+  getDefaultSettings,
+  getDefaultVoiceSettings
+} from '../../../../../shared/orca-profiles/constants'
 import {
   FakeVoiceAudio,
   FakeVoicePeer,
