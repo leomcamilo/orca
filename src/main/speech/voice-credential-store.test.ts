@@ -1,3 +1,5 @@
+import type * as NodeOs from 'node:os'
+import type * as VoiceCredentialFile from './voice-credential-file'
 import { build } from 'esbuild'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
@@ -22,11 +24,11 @@ import {
 
 const home = vi.hoisted(() => ({ path: '', workerPath: '' }))
 vi.mock('node:os', async (original) => ({
-  ...(await original<typeof import('node:os')>()),
+  ...(await original<typeof NodeOs>()),
   homedir: () => home.path
 }))
 vi.mock('./voice-credential-file', async (original) => {
-  const { voiceCredentialFile: run } = await original<typeof import('./voice-credential-file')>()
+  const { voiceCredentialFile: run } = await original<typeof VoiceCredentialFile>()
   return { voiceCredentialFile: (job: Parameters<typeof run>[0]) => run(job, home.workerPath) }
 })
 let workerDirectory: string
