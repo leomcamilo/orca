@@ -30,10 +30,10 @@ export default function NativeChatView(props: NativeChatViewProps): React.JSX.El
           >
             <BotChatRoom tabId={props.tabId} sessionId={props.sessionId}>
               <NativeChatCodexVoiceProvider pane={props}>
-<NativeChatSpokenRepliesProvider pane={props}>
-<NativeChatStructuredSession {...props} />
-</NativeChatSpokenRepliesProvider>
-</NativeChatCodexVoiceProvider>
+                <NativeChatSpokenRepliesProvider pane={props}>
+                  <NativeChatStructuredSession {...props} />
+                </NativeChatSpokenRepliesProvider>
+              </NativeChatCodexVoiceProvider>
             </BotChatRoom>
           </NativeChatWorkersProvider>
         </NativeChatTabTranscriptScope>

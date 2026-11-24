@@ -77,25 +77,25 @@ beforeAll(async () => {
     logLevel: 'silent'
   })
 })
-beforeEach(() => {
+beforeEach(async () => {
   home.path = mkdtempSync(join(tmpdir(), 'orca-voice-credentials-'))
   mkdirSync(join(home.path, '.orca'))
   setSecretStore(secrets)
-  clearOpenAiSpeechApiKey()
+  await clearOpenAiSpeechApiKey()
 })
-afterEach(() => {
-  clearOpenAiSpeechApiKey()
+afterEach(async () => {
+  await clearOpenAiSpeechApiKey()
   _resetSecretStoreForTests()
   rmSync(home.path, { recursive: true, force: true })
 })
 afterAll(() => rmSync(workerDirectory, { recursive: true, force: true }))
 
 it('reads existing encrypted envelopes and writes files the existing store can decrypt', async () => {
-  createEncryptedApiKeyFileStore(options).save('old-value')
+  await createEncryptedApiKeyFileStore(options).save('old-value')
   const current = store()
   expect(await current.read()).toBe('old-value')
   await current.save('new-value')
-  expect(createEncryptedApiKeyFileStore(options).read()).toBe('new-value')
+  expect(await createEncryptedApiKeyFileStore(options).read()).toBe('new-value')
   expect(readFileSync(path(), 'utf8')).not.toContain('new-value')
   if (process.platform !== 'win32') {
     expect(statSync(path()).mode & 0o777).toBe(0o600)
@@ -118,7 +118,7 @@ it('retains plaintext compatibility and rejects corrupt envelopes without replac
   setSecretStore({ ...secrets, isEncryptionAvailable: () => false })
   const current = store()
   await current.save('plaintext-value')
-  expect(createEncryptedApiKeyFileStore(options).read()).toBe('plaintext-value')
+  expect(await createEncryptedApiKeyFileStore(options).read()).toBe('plaintext-value')
   expect(await store().read()).toBe('plaintext-value')
   writeFileSync(path(), 'corrupt-value')
   await expect(store().read()).rejects.toThrow('could not be decrypted')
@@ -138,16 +138,16 @@ it('reads OpenAI ciphertext, legacy JSON and plaintext and shares save/clear inv
   expect(await readOpenAiSpeechApiKeyAsync()).toBe(null)
   writeFileSync(getOpenAiKeyPath(), encrypt('raw-value'))
   expect(await readOpenAiSpeechApiKeyAsync()).toBe('raw-value')
-  saveOpenAiSpeechApiKey('saved-value')
+  await saveOpenAiSpeechApiKey('saved-value')
   expect(await readOpenAiSpeechApiKeyAsync()).toBe('saved-value')
-  clearOpenAiSpeechApiKey()
+  await clearOpenAiSpeechApiKey()
   expect(await readOpenAiSpeechApiKeyAsync()).toBe(null)
   writeFileSync(
     getOpenAiKeyPath(),
     JSON.stringify({ encryptedKeyBase64: encrypt('legacy-value').toString('base64') })
   )
   expect(await readOpenAiSpeechApiKeyAsync()).toBe('legacy-value')
-  clearOpenAiSpeechApiKey()
+  await clearOpenAiSpeechApiKey()
   setSecretStore({ ...secrets, isEncryptionAvailable: () => false })
   writeFileSync(getOpenAiKeyPath(), 'plaintext-key')
   expect(await readOpenAiSpeechApiKeyAsync()).toBe('plaintext-key')
@@ -173,7 +173,7 @@ it('keeps a newly saved server key when concurrent edits omit it, and clears aft
 })
 
 it('refuses sealed credentials when the host cannot decrypt without rewriting the file', async () => {
-  createEncryptedApiKeyFileStore(options).save('sealed-value')
+  await createEncryptedApiKeyFileStore(options).save('sealed-value')
   const sealed = readFileSync(path())
   setSecretStore({ ...secrets, isEncryptionAvailable: () => false })
   await expect(store().read()).rejects.toThrow('could not be decrypted')

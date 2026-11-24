@@ -26,7 +26,9 @@ export abstract class UpdaterDownloadInstall extends UpdaterRequiredRestart {
     trigger: UpdateInstallTrigger = 'manual',
     isCurrentTeamRestart?: () => boolean
   ): void {
-    if (isOrcaLeoVersion(app.getVersion())) return
+    if (isOrcaLeoVersion(app.getVersion())) {
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
@@ -183,7 +185,9 @@ export abstract class UpdaterDownloadInstall extends UpdaterRequiredRestart {
   }
 
   protected downloadUpdate(automatic = false): void {
-    if (isOrcaLeoVersion(app.getVersion())) return
+    if (isOrcaLeoVersion(app.getVersion())) {
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||

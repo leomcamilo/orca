@@ -35,7 +35,7 @@ import type {
 import type { StructuredAgentSessionAtRestCommands } from '../options/structured-agent-session-at-rest-commands'
 import type { AgentSessionSlashCommand } from '../../../../shared/agent-session/agent-session-wire'
 import type { AgentSessionThreadGoalChange } from '../../../../shared/agent-session/thread-goals/agent-session-thread-goal-wire'
-import type { AgentSessionVoiceEvent } from '../../../../shared/agent-session/agent-session-voice-conversation'
+import type { StructuredAgentSessionVoiceAdapter } from './structured-agent-session-voice-adapter'
 import type { SubmissionRejectionFact } from '../../../../shared/agent-session/failures/agent-session-failure'
 import type {
   AgentSessionCloseObserver,
@@ -183,209 +183,202 @@ export type StructuredAgentSessionSetOptionInput = {
 
 type AdapterControls = StructuredAgentSessionAdapterStop & StructuredAgentSessionAdapterPermission
 
-export type StructuredAgentSessionAdapter = AdapterControls & {
-  readAccountUsage?(record: AgentSessionRecord, signal: AbortSignal): Promise<CodexAccountUsageRead>
-  /** The `/mcp` panel's read or action on the chat's MCP servers; never enters the mutation queue. */
-  manageMcp?(
-    record: AgentSessionRecord,
-    operation: AgentSessionMcpOperation
-  ): Promise<AgentSessionMcpResult>
-  /** Records the person's approval of one action the agent's automatic review denied; the retry is
-   *  still reviewed. False: no running agent to record it. */
-  approveAutoReviewDenial?(input: {
-    sessionId: string
-    threadId: string
-    event: Record<string, unknown>
-  }): Promise<boolean>
-  open: StructuredAgentSessionProviderOpen
-  supportsCreate?(location: AgentSessionExecutionLocation, agent: string): boolean
-  /** Keep runtime/location support in adapter data for remote enablement. */
-  supportsLocation?(location: AgentSessionExecutionLocation): boolean
-  /** Spawn once per reservation; use its token/fence because the store rejects mismatched handles. */
-  acquire(input: StructuredAgentSessionAcquireInput): Promise<AgentSessionAcquisition>
-  /** Reap failed acquisitions; true proves child exit, root-only proof throws AgentSessionAcquisitionRootExitObservedError. */
-  releaseAcquisition?(input: { sessionId: string }): Promise<boolean>
-  hasOwnedAcquisition?(sessionId: string): boolean
-  stoppedAcquisition?(sessionId: string): AcquisitionReceipt | undefined
-  dispatch(input: {
-    sessionId: string
-    clientMessageId: string
-    body: AgentJournalMessageItem
-    /** Apply immutable submission choices only to this dispatch. */
-    executionOptions?: AgentSessionExecutionOptions
-    /** Abort only before provider write, preserving the original signal reason so the host knows it was unwritten. */
-    signal?: AbortSignal
-    fence: number
-    /** Preserve submission time as the opened turn’s requestedAt. */
-    requestedAt?: number
-    beforeDispatch?: () => Promise<void>
-    /** Whether the host still owns this exact child after asynchronous preparation. */
-    isCurrent?: () => boolean
-    admitFreshInput?: StructuredAgentSessionAdmitFreshInput
-    /** Mark preparation before choices mutate the provider. */
-    onInputPreparation?: () => void
-    /** Checkpoint between choice application and execution-evidence capture. */
-    onExecutionSnapshot?: () => void
-  }): Promise<AgentSessionDispatchOutcome>
-  /** Narrow declared rewind per session; agent supplies the resting-session answer. */
-  rewindSupport?(sessionId: string, agent?: string): AgentSessionRewindSupport
-  prepareRewind?: PrepareStructuredRewind
-  /** Observe lost-reply rewind effects without repeating; keptTurnId null means no turns retained. */
-  recoverRewind?(input: {
-    sessionId: string
-    fence: number
-    signal?: AbortSignal
-    beforeTurnId: string
-    keptTurnId: string | null
-    threadId?: string
-  }): Promise<{ ok: true } | { ok: false; reason: AgentSessionRewindReason }>
-  rewind?(input: {
-    sessionId: string
-    fence: number
-    beforeTurnId: string
-  }): Promise<{ ok: true } | { ok: false; reason: AgentSessionRewindReason }>
-  /** Save the rewind fork before changing journal/record; refusals preserve the conversation, even at rest. */
-  forkForRewind?(input: {
-    record: AgentSessionRecord
-    beforeMessage: { sessionId: string; uuid: string }
-    rewindOperationId: string
-  }): Promise<
-    { ok: true; fork: AgentSessionRewindFork } | { ok: false; reason: AgentSessionRewindReason }
-  >
-  /** Return provider compaction admission; translator ends the command turn unless child-exit recovery does first. */
-  compact?(input: {
-    sessionId: string
-    fence: number
-    command: StructuredAgentSessionCommandRun
-  }): Promise<AgentSessionCommandAdmission>
-  /** Rejection proves refusal; thrown changes have unknown effects. */
-  changeThreadGoal?(input: {
-    sessionId: string
-    fence: number
-    change: AgentSessionThreadGoalChange
-    /** Existing recorded goals require set to create a new objective, never rewrite the old one. */
-    replacesGoal: boolean
-    executionOptions?: AgentSessionExecutionOptions
-    signal?: AbortSignal
-  }): Promise<{ ok: true } | { ok: false; rejected: string }>
-  /** The live child's native voice for its own thread; the client owns the media, and `emit`
-   *  receives this attempt's frames until one is terminal. Absent when the agent has none. */
-  startVoiceConversation?(input: {
-    sessionId: string
-    offerSdp: string
-    /** Sent only when the live child lists it; otherwise the provider's default voice speaks. */
-    voice?: string
-    emit: (event: AgentSessionVoiceEvent) => void
-  }): { stop: () => void }
-  /** Voices the live child offers for that voice session; null without a live child or a listing. */
-  listVoiceConversationVoices?(sessionId: string): Promise<string[] | null>
-  /** Derive unanswered retained work from the live child; false without one. */
-  holdsDispatch?(sessionId: string): boolean
-  /** Fresh answer before an idle stop: provider-declared work keeps the child; undefined has none to ask. */
-  confirmIdle?(sessionId: string): Promise<AgentSessionIdleConfirmation> | undefined
-  /** The root turn the live child is running, null when idle; absent when the agent cannot say. */
-  liveTurnId?(sessionId: string): string | null | undefined
-  /** The live child opened in another approval mode than requested and this input picks another model. */
-  requiresModelTransitionRestart?(input: {
-    sessionId: string
-    fence: number
-    executionOptions?: AgentSessionExecutionOptions
-  }): boolean
-  /** Captures only this input's pending answer/output in the supplied live acquisition. */
-  capturePendingOutput?(input: {
-    sessionId: string
-    clientMessageId: string
-    fence: number
-    generation: string
-  }): (() => boolean) | undefined
-  /** Undefined without a live child; then the host conservatively treats unanswered sends as held. */
-  heldSends?(sessionId: string): ReadonlySet<string> | undefined
-  /** Prove this acquisition’s root alive for lease renewal; absent/false falls back to PID probing. */
-  holdsLiveProviderProcess?(sessionId: string, acquisitionGeneration: string): boolean
-  /** This exact acquisition's ending before the host committed it ready, as the adapter reads it. */
-  startupEnding?(
-    sessionId: string,
-    acquisitionGeneration: string
-  ): AgentSessionStartFailure | undefined
-  /** The start's owner finished: nothing reads this acquisition's ending any more. */
-  retireStartup?(sessionId: string, acquisitionGeneration: string): void
-  /** Undefined preserves the client catalog when the provider reports none. */
-  readCommands?(sessionId: string): AgentSessionSlashCommand[] | undefined
-  atRestCommands?: StructuredAgentSessionAtRestCommands
-  /** Claim the live callback, build reply, commit journal CAS, then answer; reject unbuildable replies before commit. */
-  answerPrompt(input: {
-    sessionId: string
-    itemId: string
-    kind: 'approval' | 'question'
-    response: AgentSessionPromptResponse
-    fence: number
-    commit: () => Promise<void>
-  }): Promise<void>
-  setOption(
-    input: StructuredAgentSessionSetOptionInput
-  ): Promise<void | Readonly<Record<string, string>>>
-  /** Opt in only when setOption can update idle metadata without a provider turn. */
-  canSetOptionWhileIdle?(input: StructuredAgentSessionSetOptionInput): boolean
-  /** A saved model pick, even of the unchanged value; a child on a provider fallback applies it next turn. */
-  noteModelPick?(input: { sessionId: string; fence: number }): void
-  /** Finite live compiler facts for this exact child, without a proposed card. */
-  captureMessageSteeringInputs?(input: {
-    sessionId: string
-    fence: number
-    acquisitionGeneration: string | null
-  }): StructuredMessageSteeringInputs
-  /** Synchronous capability projection; never acquires inventory or changes saved intent. */
-  projectOptions?(
-    sessionId: string,
-    options: Readonly<Record<string, string>>
-  ): StructuredAgentSessionOptionProjection | undefined
-  /** Memory projection only; optional native observations belong to provider activity. */
-  readOptions?(input: {
-    sessionId: string
-    fence: number
-  }): Promise<StructuredAgentSessionLiveOptions>
-  /** A fresh independent text task; never acquires or writes a turn in the chat. */
-  generateText?(input: {
-    agent: string
-    accountHome: AgentSessionAccountHome
-    prompt: string
-    shouldExecute?: () => boolean
-  }): Promise<string | null>
-  /** Copy the provider conversation without changing the chat’s ID; omit for CLI-based forks. */
-  copyConversation?(
-    input: StructuredAgentSessionConversationCopyInput
-  ): Promise<AiVaultConversationCopy & { resumeCursor?: string; coverage?: NativeCopyCoverage }>
-  /** Give the agent's own conversation the user's chat name, as the agent's own rename would:
-   *  through the live child holding that conversation, otherwise at rest. Best effort. */
-  renameProviderSession?(input: {
-    record: AgentSessionRecord
-    providerSessionId: string
-    name: string
-  }): Promise<void>
-  /** Capture native invocation inputs at the committed explicit occurrence. */
-  nameProviderConversation?(input: {
-    record: AgentSessionRecord
-    name: string
-    sequence: number
-    inheritance?: boolean
-  }): Promise<void> | undefined
-  stopProviderNaming?(): void
-  /** The session gained its first, or lost its last, reader that shows prompt suggestions. */
-  promptSuggestionInterestChanged?(sessionId: string, wanted: boolean): void
-  /** True proves child exit; root/processless verdicts throw only after finalization (stopAgentSessionProviderRoot). */
-  closeSession?(
-    sessionId: string,
-    observeClose?: AgentSessionCloseObserver,
-    options?: ProviderProcessCloseOptions
-  ): Promise<boolean>
-  /** Sink-failure shutdown leaves exit recovery unexpected. */
-  forceCloseSession?(sessionId: string): Promise<boolean>
-  /** Teardown without requiring a future-resume cursor. */
-  disposeSession?(
-    sessionId: string,
-    observeClose?: AgentSessionCloseObserver,
-    options?: ProviderProcessCloseOptions
-  ): Promise<boolean>
-  /** Acknowledge only after dead-child, lease and journal ownership release. */
-  acknowledgeSessionRelease?(sessionId: string, acquisition?: AcquisitionReceipt): void
-}
+export type StructuredAgentSessionAdapter = AdapterControls &
+  StructuredAgentSessionVoiceAdapter & {
+    readAccountUsage?(
+      record: AgentSessionRecord,
+      signal: AbortSignal
+    ): Promise<CodexAccountUsageRead>
+    /** The `/mcp` panel's read or action on the chat's MCP servers; never enters the mutation queue. */
+    manageMcp?(
+      record: AgentSessionRecord,
+      operation: AgentSessionMcpOperation
+    ): Promise<AgentSessionMcpResult>
+    /** Records the person's approval of one action the agent's automatic review denied; the retry is
+     *  still reviewed. False: no running agent to record it. */
+    approveAutoReviewDenial?(input: {
+      sessionId: string
+      threadId: string
+      event: Record<string, unknown>
+    }): Promise<boolean>
+    open: StructuredAgentSessionProviderOpen
+    supportsCreate?(location: AgentSessionExecutionLocation, agent: string): boolean
+    /** Keep runtime/location support in adapter data for remote enablement. */
+    supportsLocation?(location: AgentSessionExecutionLocation): boolean
+    /** Spawn once per reservation; use its token/fence because the store rejects mismatched handles. */
+    acquire(input: StructuredAgentSessionAcquireInput): Promise<AgentSessionAcquisition>
+    /** Reap failed acquisitions; true proves child exit, root-only proof throws AgentSessionAcquisitionRootExitObservedError. */
+    releaseAcquisition?(input: { sessionId: string }): Promise<boolean>
+    hasOwnedAcquisition?(sessionId: string): boolean
+    stoppedAcquisition?(sessionId: string): AcquisitionReceipt | undefined
+    dispatch(input: {
+      sessionId: string
+      clientMessageId: string
+      body: AgentJournalMessageItem
+      /** Apply immutable submission choices only to this dispatch. */
+      executionOptions?: AgentSessionExecutionOptions
+      /** Abort only before provider write, preserving the original signal reason so the host knows it was unwritten. */
+      signal?: AbortSignal
+      fence: number
+      /** Preserve submission time as the opened turn’s requestedAt. */
+      requestedAt?: number
+      beforeDispatch?: () => Promise<void>
+      /** Whether the host still owns this exact child after asynchronous preparation. */
+      isCurrent?: () => boolean
+      admitFreshInput?: StructuredAgentSessionAdmitFreshInput
+      /** Mark preparation before choices mutate the provider. */
+      onInputPreparation?: () => void
+      /** Checkpoint between choice application and execution-evidence capture. */
+      onExecutionSnapshot?: () => void
+    }): Promise<AgentSessionDispatchOutcome>
+    /** Narrow declared rewind per session; agent supplies the resting-session answer. */
+    rewindSupport?(sessionId: string, agent?: string): AgentSessionRewindSupport
+    prepareRewind?: PrepareStructuredRewind
+    /** Observe lost-reply rewind effects without repeating; keptTurnId null means no turns retained. */
+    recoverRewind?(input: {
+      sessionId: string
+      fence: number
+      signal?: AbortSignal
+      beforeTurnId: string
+      keptTurnId: string | null
+      threadId?: string
+    }): Promise<{ ok: true } | { ok: false; reason: AgentSessionRewindReason }>
+    rewind?(input: {
+      sessionId: string
+      fence: number
+      beforeTurnId: string
+    }): Promise<{ ok: true } | { ok: false; reason: AgentSessionRewindReason }>
+    /** Save the rewind fork before changing journal/record; refusals preserve the conversation, even at rest. */
+    forkForRewind?(input: {
+      record: AgentSessionRecord
+      beforeMessage: { sessionId: string; uuid: string }
+      rewindOperationId: string
+    }): Promise<
+      { ok: true; fork: AgentSessionRewindFork } | { ok: false; reason: AgentSessionRewindReason }
+    >
+    /** Return provider compaction admission; translator ends the command turn unless child-exit recovery does first. */
+    compact?(input: {
+      sessionId: string
+      fence: number
+      command: StructuredAgentSessionCommandRun
+    }): Promise<AgentSessionCommandAdmission>
+    /** Rejection proves refusal; thrown changes have unknown effects. */
+    changeThreadGoal?(input: {
+      sessionId: string
+      fence: number
+      change: AgentSessionThreadGoalChange
+      /** Existing recorded goals require set to create a new objective, never rewrite the old one. */
+      replacesGoal: boolean
+      executionOptions?: AgentSessionExecutionOptions
+      signal?: AbortSignal
+    }): Promise<{ ok: true } | { ok: false; rejected: string }>
+    /** Derive unanswered retained work from the live child; false without one. */
+    holdsDispatch?(sessionId: string): boolean
+    /** Fresh answer before an idle stop: provider-declared work keeps the child; undefined has none to ask. */
+    confirmIdle?(sessionId: string): Promise<AgentSessionIdleConfirmation> | undefined
+    /** The root turn the live child is running, null when idle; absent when the agent cannot say. */
+    liveTurnId?(sessionId: string): string | null | undefined
+    /** The live child opened in another approval mode than requested and this input picks another model. */
+    requiresModelTransitionRestart?(input: {
+      sessionId: string
+      fence: number
+      executionOptions?: AgentSessionExecutionOptions
+    }): boolean
+    /** Captures only this input's pending answer/output in the supplied live acquisition. */
+    capturePendingOutput?(input: {
+      sessionId: string
+      clientMessageId: string
+      fence: number
+      generation: string
+    }): (() => boolean) | undefined
+    /** Undefined without a live child; then the host conservatively treats unanswered sends as held. */
+    heldSends?(sessionId: string): ReadonlySet<string> | undefined
+    /** Prove this acquisition’s root alive for lease renewal; absent/false falls back to PID probing. */
+    holdsLiveProviderProcess?(sessionId: string, acquisitionGeneration: string): boolean
+    /** This exact acquisition's ending before the host committed it ready, as the adapter reads it. */
+    startupEnding?(
+      sessionId: string,
+      acquisitionGeneration: string
+    ): AgentSessionStartFailure | undefined
+    /** The start's owner finished: nothing reads this acquisition's ending any more. */
+    retireStartup?(sessionId: string, acquisitionGeneration: string): void
+    /** Undefined preserves the client catalog when the provider reports none. */
+    readCommands?(sessionId: string): AgentSessionSlashCommand[] | undefined
+    atRestCommands?: StructuredAgentSessionAtRestCommands
+    /** Claim the live callback, build reply, commit journal CAS, then answer; reject unbuildable replies before commit. */
+    answerPrompt(input: {
+      sessionId: string
+      itemId: string
+      kind: 'approval' | 'question'
+      response: AgentSessionPromptResponse
+      fence: number
+      commit: () => Promise<void>
+    }): Promise<void>
+    setOption(
+      input: StructuredAgentSessionSetOptionInput
+    ): Promise<void | Readonly<Record<string, string>>>
+    /** Opt in only when setOption can update idle metadata without a provider turn. */
+    canSetOptionWhileIdle?(input: StructuredAgentSessionSetOptionInput): boolean
+    /** A saved model pick, even of the unchanged value; a child on a provider fallback applies it next turn. */
+    noteModelPick?(input: { sessionId: string; fence: number }): void
+    /** Finite live compiler facts for this exact child, without a proposed card. */
+    captureMessageSteeringInputs?(input: {
+      sessionId: string
+      fence: number
+      acquisitionGeneration: string | null
+    }): StructuredMessageSteeringInputs
+    /** Synchronous capability projection; never acquires inventory or changes saved intent. */
+    projectOptions?(
+      sessionId: string,
+      options: Readonly<Record<string, string>>
+    ): StructuredAgentSessionOptionProjection | undefined
+    /** Memory projection only; optional native observations belong to provider activity. */
+    readOptions?(input: {
+      sessionId: string
+      fence: number
+    }): Promise<StructuredAgentSessionLiveOptions>
+    /** A fresh independent text task; never acquires or writes a turn in the chat. */
+    generateText?(input: {
+      agent: string
+      accountHome: AgentSessionAccountHome
+      prompt: string
+      shouldExecute?: () => boolean
+    }): Promise<string | null>
+    /** Copy the provider conversation without changing the chat’s ID; omit for CLI-based forks. */
+    copyConversation?(
+      input: StructuredAgentSessionConversationCopyInput
+    ): Promise<AiVaultConversationCopy & { resumeCursor?: string; coverage?: NativeCopyCoverage }>
+    /** Give the agent's own conversation the user's chat name, as the agent's own rename would:
+     *  through the live child holding that conversation, otherwise at rest. Best effort. */
+    renameProviderSession?(input: {
+      record: AgentSessionRecord
+      providerSessionId: string
+      name: string
+    }): Promise<void>
+    /** Capture native invocation inputs at the committed explicit occurrence. */
+    nameProviderConversation?(input: {
+      record: AgentSessionRecord
+      name: string
+      sequence: number
+      inheritance?: boolean
+    }): Promise<void> | undefined
+    stopProviderNaming?(): void
+    /** The session gained its first, or lost its last, reader that shows prompt suggestions. */
+    promptSuggestionInterestChanged?(sessionId: string, wanted: boolean): void
+    /** True proves child exit; root/processless verdicts throw only after finalization (stopAgentSessionProviderRoot). */
+    closeSession?(
+      sessionId: string,
+      observeClose?: AgentSessionCloseObserver,
+      options?: ProviderProcessCloseOptions
+    ): Promise<boolean>
+    /** Sink-failure shutdown leaves exit recovery unexpected. */
+    forceCloseSession?(sessionId: string): Promise<boolean>
+    /** Teardown without requiring a future-resume cursor. */
+    disposeSession?(
+      sessionId: string,
+      observeClose?: AgentSessionCloseObserver,
+      options?: ProviderProcessCloseOptions
+    ): Promise<boolean>
+    /** Acknowledge only after dead-child, lease and journal ownership release. */
+    acknowledgeSessionRelease?(sessionId: string, acquisition?: AcquisitionReceipt): void
+  }

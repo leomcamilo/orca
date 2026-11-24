@@ -64,7 +64,7 @@ import { useNativeChatStructuredComposerTransport } from '@/components/native-ch
 import { NativeChatStructuredComposerTabStrips } from '@/components/native-chat/pane/actions/NativeChatStructuredComposerTabStrips'
 import { nativeChatPaneHeader } from '@/components/native-chat/pane/actions/NativeChatPaneHeader'
 import { NativeChatWorkerAutoCloseBanner } from '@/components/native-chat/worker-lifetime/NativeChatWorkerAutoCloseBanner'
-import { structuredAgentSessionReadFailureNotice } from '@/components/native-chat/messages/notices/structured-agent-session-read-failure-notice'
+import { structuredAgentSessionPaneReadFailure } from '@/components/native-chat/messages/notices/structured-agent-session-read-failure-notice'
 import { useStructuredAgentSessionDeliveryNotices } from '@/components/native-chat/session/structured/delivery/use-structured-agent-session-delivery-notices'
 import { dispatchWasWithdrawn } from '../../../../shared/agent-session/requests/structured-agent-session-dispatch-rejection'
 import { useNativeChatHostOutage } from '@/components/native-chat/host-access/use-native-chat-host-outage'
@@ -386,7 +386,7 @@ export function NativeChatStructuredSession(props: Omit<NativeChatStructuredView
               )}
               {subagents.statusBar}
               <NativeChatVoiceStrips chat={controller} promptKind={prompt?.body.kind} />
-          {composerShown ? (
+              {composerShown ? (
                 <NativeChatComposer
                   ref={composerRef}
                   terminalTabId={props.tabId}
