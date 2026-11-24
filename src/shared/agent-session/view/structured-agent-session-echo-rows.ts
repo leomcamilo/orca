@@ -1,3 +1,4 @@
+import { blocksWithoutSpokenReplyRequest } from '../../native-chat/spoken-replies/spoken-reply-request'
 import type { AgentJournalSubmission } from '../journal/agent-session-journal-types'
 import { agentJournalSubmissionKey } from '../journal/agent-session-journal-item-key'
 import { STRUCTURED_AGENT_SESSION_SUBMISSION_MISSING } from '../requests/structured-agent-session-send-evidence'
@@ -37,7 +38,7 @@ export function structuredAgentSessionEchoRows(
             ? 'pending'
             : 'unknown',
         timestamp: entry.queuedAt,
-        blocks: entry.body.blocks,
+        blocks: blocksWithoutSpokenReplyRequest(entry.body.blocks),
         ...(entry.afterSequence !== undefined
           ? {
               journalPosition: { sequence: entry.afterSequence + 0.5, index: entry.queuedAt ?? 0 }

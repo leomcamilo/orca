@@ -16,6 +16,7 @@ import {
 } from './updater-state'
 import { UpdaterRequiredRestart } from './updater-required-restart'
 import { prepareThisProcessShipItStaging } from '../mac-install/shipit-leftover-recovery'
+import { isOrcaLeoVersion } from '../../../shared/orca-leo/orca-leo-distribution'
 import type { UpdateInstallTrigger } from './updater-state'
 
 export abstract class UpdaterDownloadInstall extends UpdaterRequiredRestart {
@@ -25,6 +26,7 @@ export abstract class UpdaterDownloadInstall extends UpdaterRequiredRestart {
     trigger: UpdateInstallTrigger = 'manual',
     isCurrentTeamRestart?: () => boolean
   ): void {
+    if (isOrcaLeoVersion(app.getVersion())) return
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
@@ -181,6 +183,7 @@ export abstract class UpdaterDownloadInstall extends UpdaterRequiredRestart {
   }
 
   protected downloadUpdate(automatic = false): void {
+    if (isOrcaLeoVersion(app.getVersion())) return
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||

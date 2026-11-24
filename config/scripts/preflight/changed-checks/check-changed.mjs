@@ -213,7 +213,8 @@ function buildTasks(root, plan, { files, mergeBase, maxWorkers, bun, transitive 
   const direct = transitive ? null : selectDirectTests(root, related)
   const explicit = [...new Set([...(direct ?? []), ...colocated])].sort()
   const useRelated = direct === null && related.length > 0
-  if (useRelated || explicit.length > 0) {
+  const unitTestsElsewhere = process.env.ORCA_GATE_UNIT_TESTS === 'elsewhere'
+  if (!unitTestsElsewhere && (useRelated || explicit.length > 0)) {
     const vitest = (selection) =>
       step(node, [
         'config/scripts/test-runtime/execution-policy/run-vitest.mjs',

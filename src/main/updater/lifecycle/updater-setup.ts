@@ -35,6 +35,7 @@ import type {
   UpdateInstallMode,
   UpdateInstallTrigger
 } from './updater-state'
+import { isOrcaLeoVersion } from '../../../shared/orca-leo/orca-leo-distribution'
 
 export type UpdaterSetupOptions = {
   getMainWindow?: () => BrowserWindow | null
@@ -170,7 +171,7 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
       this.sendErrorStatus(`The server update did not complete: ${serveHandoffFailure}`, true)
     }
 
-    if (!app.isPackaged) {
+    if (!app.isPackaged || isOrcaLeoVersion(app.getVersion())) {
       return
     }
 

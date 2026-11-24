@@ -4,6 +4,7 @@ import { otherPersonTypistOf, type OtherPersonTypist } from '../journal/agent-jo
 import { agentMessageDisplayText } from './messages/agent-message-display-text'
 import { readAutomationRunMessage } from '../../automations/automation-run-message'
 import { queuedMessageEditableText } from '../../native-chat/input/queued-messages/queued-message-edit'
+import { withoutSpokenReplyRequest } from '../../native-chat/spoken-replies/spoken-reply-request'
 import {
   readWholeAgentSessionFailureFact,
   type AgentSessionFailureFact,
@@ -74,7 +75,9 @@ export type QueuedMessageCard = {
 }
 
 export function queuedMessageCardText(body: AgentSessionQueuedMessage['body']): string {
-  return body.blocks.flatMap((block) => (block.type === 'text' ? [block.text] : [])).join('\n')
+  return withoutSpokenReplyRequest(
+    body.blocks.flatMap((block) => (block.type === 'text' ? [block.text] : [])).join('\n')
+  )
 }
 
 export function queuedMessageCardImages(

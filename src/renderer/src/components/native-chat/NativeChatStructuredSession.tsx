@@ -43,6 +43,7 @@ import type { NativeChatStructuredViewProps } from './native-chat-view-types'
 import { useNativeChatInterruptedContinuation } from './usage/NativeChatInterruptedContinue'
 import { NativeChatPromptSlotNotices } from './composer/controls/NativeChatComposerNotices'
 import { NativeChatAntigravityAuthProvider } from './antigravity-auth/native-chat-antigravity-auth'
+import { NativeChatVoiceStrips } from './voice/NativeChatVoiceStrips'
 import {
   NativeChatInstallSlot,
   useNativeChatInstallSlot
@@ -146,11 +147,7 @@ export function NativeChatStructuredSession(props: Omit<NativeChatStructuredView
     startFailures,
     agentName: agentLabel
   })
-  // A lost contact is the host notice's to say; the read adds only a refusal the host sent.
-  const readFailure =
-    controller.status === 'error' && !(hostOutage && !controller.readRefusal)
-      ? structuredAgentSessionReadFailureNotice(controller.readRefusal)
-      : null
+  const readFailure = structuredAgentSessionPaneReadFailure(controller, hostOutage)
   // Final read refusal replaces the pane because no existing action can succeed.
   const viewState = selectNativeChatViewState(session, { readRetries: readFailure?.final !== true })
   const imageRuntimeContext = useNativeChatImageRuntimeContext(props.tabId)
@@ -388,7 +385,8 @@ export function NativeChatStructuredSession(props: Omit<NativeChatStructuredView
                 />
               )}
               {subagents.statusBar}
-              {composerShown ? (
+              <NativeChatVoiceStrips chat={controller} promptKind={prompt?.body.kind} />
+          {composerShown ? (
                 <NativeChatComposer
                   ref={composerRef}
                   terminalTabId={props.tabId}

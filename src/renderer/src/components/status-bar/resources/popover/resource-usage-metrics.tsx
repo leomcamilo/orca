@@ -7,6 +7,7 @@ import type {
   UsageValues
 } from '../../../../../../shared/diagnostics/process-stats-types'
 import type { Metric } from '../workspace-attribution/resource-usage-merge-types'
+import { withOrcaLeoName } from '../../../../../../shared/orca-leo/orca-leo-distribution'
 
 export const METRIC_COLUMNS_CLS = 'flex items-center shrink-0 tabular-nums'
 export const CPU_COLUMN_CLS = 'w-12 text-right'
@@ -184,7 +185,9 @@ export function AppSection({
         </button>
         <div className="flex-1 min-w-0 py-2 pr-3 flex items-center justify-between">
           <span className="text-[11px] font-semibold uppercase tracking-wide truncate text-muted-foreground">
-            {t('auto.components.status.bar.ResourceUsageStatusSegment.288a4dd177', 'Orca')}
+            {withOrcaLeoName(
+              t('auto.components.status.bar.ResourceUsageStatusSegment.288a4dd177', 'Orca')
+            )}
           </span>
           <div className="flex items-center gap-2 shrink-0">
             <Sparkline samples={app.history} />

@@ -1,4 +1,5 @@
 import type { DictationTerm } from './dictation/dictation-dictionary'
+import type { SpokenReplyProvider } from '../speech-synthesis'
 export type SpeechModelType =
   | 'transducer'
   | 'paraformer'
@@ -146,6 +147,28 @@ export type VoiceSettings = {
   aiCleanupInstructions?: string
   /** Said to take back what came just before it; only AI cleanup acts on it. Absent = "scratch that". */
   dictationCorrectionWord?: string
+  /** Codex Voice mode's voice, as Codex lists it. Absent = Codex's configured or built-in voice. */
+  codexVoice?: string
+  /** Offers reading replies aloud in chats other than Codex's. Absent = off. */
+  spokenReplies?: boolean
+  /** The system voice that reads replies, by its URI. Absent, or a voice the system no longer has = one chosen by language. */
+  spokenReplyVoice?: string
+  /** Who reads spoken replies. Absent = the system voice. */
+  spokenReplyProvider?: SpokenReplyProvider
+  /** OpenAI's voice when it reads them. Absent = its recommended default. */
+  spokenReplyOpenAiVoice?: string
+  /** The ElevenLabs voice id and model when it reads them. Absent model = Flash v2.5. */
+  spokenReplyElevenLabsVoice?: string
+  spokenReplyElevenLabsModel?: string
+  /** Characters the paid speech services may read in a month; null = no limit. Absent = the
+   *  built-in default. */
+  spokenReplyMonthlyCharacterLimit?: number | null
+  /** While the chat listens for the person's turn, their words stop a reply being read instead
+   *  of going out after it. Absent = off. */
+  spokenReplyInterrupt?: boolean
+  /** While the chat listens for the person's turn, the microphone stays open as the agent works;
+   *  what they say waits for the turn's end. Absent = on. */
+  spokenReplyListenWhileWorking?: boolean
 }
 
 /** Where a dictation goes: an engine in the desktop's own process takes repoTerms, a host resolves worktreeId itself. */

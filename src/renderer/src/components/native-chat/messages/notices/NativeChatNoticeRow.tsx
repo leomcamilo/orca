@@ -2,6 +2,8 @@ import { NativeChatGoalCheckNotice } from './NativeChatGoalCheckNotice'
 import { BotTidyUpLine } from '@/components/bots/BotTidyUpLine'
 import { nativeChatBotCard } from '../../native-chat-bot-cards'
 import * as Fallback from '../../../../../../shared/native-chat/transcript/notices/claude-model-fallback'
+import { nativeChatVoiceTranscriptSpeaker } from '../../../../../../shared/native-chat/native-chat-voice-transcript'
+import { NativeChatVoiceTranscriptLine } from '../../voice/NativeChatVoiceTranscriptLine'
 import { NativeChatUsageLimitRow } from '../../usage/NativeChatUsageLimitRow'
 import { agentSessionGoalControlWords } from '../../session/goals/agent-session-goal-control-words'
 import { AlertCircle, AlertTriangle, Info, Notebook } from 'lucide-react'
@@ -119,6 +121,10 @@ export function NativeChatNoticeRow({
     return (
       <NativeChatPullRequestEventLine block={block} messageId={messageId} timestamp={timestamp} />
     )
+  }
+  const voiceSpeaker = nativeChatVoiceTranscriptSpeaker(block.presentation)
+  if (voiceSpeaker) {
+    return <NativeChatVoiceTranscriptLine speaker={voiceSpeaker} text={block.text} />
   }
   const look = nativeChatNoticeLook(block)
   if (look.kind === 'forked-from') {

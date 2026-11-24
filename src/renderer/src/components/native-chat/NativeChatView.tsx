@@ -9,6 +9,8 @@ import { NativeChatTabTranscriptScope } from './native-chat-transcript-scope'
 import { NativeChatWorkersProvider } from './native-chat-workers-context'
 
 export type { NativeChatViewProps } from './native-chat-view-types'
+import { NativeChatCodexVoiceProvider } from './voice/NativeChatCodexVoiceProvider'
+import { NativeChatSpokenRepliesProvider } from './voice/spoken-replies/NativeChatSpokenRepliesProvider'
 
 export default function NativeChatView(props: NativeChatViewProps): React.JSX.Element {
   return (
@@ -27,7 +29,11 @@ export default function NativeChatView(props: NativeChatViewProps): React.JSX.El
             visible={props.isVisible}
           >
             <BotChatRoom tabId={props.tabId} sessionId={props.sessionId}>
-              <NativeChatStructuredSession {...props} />
+              <NativeChatCodexVoiceProvider pane={props}>
+<NativeChatSpokenRepliesProvider pane={props}>
+<NativeChatStructuredSession {...props} />
+</NativeChatSpokenRepliesProvider>
+</NativeChatCodexVoiceProvider>
             </BotChatRoom>
           </NativeChatWorkersProvider>
         </NativeChatTabTranscriptScope>

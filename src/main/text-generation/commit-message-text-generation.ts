@@ -3,6 +3,7 @@ import type { BranchNameWorkContext } from '../../shared/source-control/ai/namin
 import type { ConversationNameContext } from '../../shared/source-control/ai/generation/conversation-name-generation'
 import type { CommitMessageDraftContext } from '../../shared/source-control/ai/generation/commit-message-generation'
 import { LOCAL_COMMIT_MESSAGE_HOST_KEY } from '../../shared/source-control/ai/generation/commit-message-host-key'
+import { withoutSpokenReplyRequest } from '../../shared/native-chat/spoken-replies/spoken-reply-request'
 
 import type {
   GeneratedPullRequestFields,
@@ -111,7 +112,12 @@ export function generateBranchNameFromContext(
   params: ResolvedSourceControlAiGenerationParams,
   target: CommitMessageGenerationTarget
 ): Promise<GenerateBranchNameResult> {
-  return generateBranchName({ context, params, target, spawnAgent: spawnSourceControlAgent })
+  return generateBranchName({
+    context: { ...context, firstPrompt: withoutSpokenReplyRequest(context.firstPrompt) },
+    params,
+    target,
+    spawnAgent: spawnSourceControlAgent
+  })
 }
 
 export function generateConversationNameFromContext(
