@@ -34,6 +34,7 @@ import {
   getDialogDescription,
   getNotesPlaceholder
 } from './crash-report-dialog-copy'
+import { withOrcaLeoName } from '../../../../shared/orca-leo/orca-leo-distribution'
 
 type CrashReportDialogSurfaceProps = {
   open: boolean
@@ -199,7 +200,7 @@ export function CrashReportDialogSurface({
     >
       <DialogContent size="form" busy={submitting}>
         <DialogHeader>
-          <DialogTitle>{getDialogTitle(report, t)}</DialogTitle>
+          <DialogTitle>{withOrcaLeoName(getDialogTitle(report, t))}</DialogTitle>
           <DialogDescription>{getDialogDescription(report, t)}</DialogDescription>
         </DialogHeader>
 
@@ -265,7 +266,9 @@ export function CrashReportDialogSurface({
                   : report.createdAt
               ).toLocaleString(intlLocale)}{' '}
               · {report.platform} {report.arch} ·{' '}
-              {t('auto.components.crash.report.CrashReportDialog.835037edc9', 'Orca')}{' '}
+              {withOrcaLeoName(
+                t('auto.components.crash.report.CrashReportDialog.835037edc9', 'Orca')
+              )}{' '}
               {report.appVersion}
             </div>
             <pre className="mt-1.5 whitespace-pre-wrap [overflow-wrap:anywhere]">

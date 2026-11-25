@@ -43,6 +43,7 @@ import type { NativeChatStructuredViewProps } from './native-chat-view-types'
 import { useNativeChatInterruptedContinuation } from './usage/NativeChatInterruptedContinue'
 import { NativeChatPromptSlotNotices } from './composer/controls/NativeChatComposerNotices'
 import { NativeChatAntigravityAuthProvider } from './antigravity-auth/native-chat-antigravity-auth'
+import { NativeChatVoiceStrips } from './voice/NativeChatVoiceStrips'
 import {
   NativeChatInstallSlot,
   useNativeChatInstallSlot
@@ -63,7 +64,7 @@ import { useNativeChatStructuredComposerTransport } from '@/components/native-ch
 import { NativeChatStructuredComposerTabStrips } from '@/components/native-chat/pane/actions/NativeChatStructuredComposerTabStrips'
 import { nativeChatPaneHeader } from '@/components/native-chat/pane/actions/NativeChatPaneHeader'
 import { NativeChatWorkerAutoCloseBanner } from '@/components/native-chat/worker-lifetime/NativeChatWorkerAutoCloseBanner'
-import { structuredAgentSessionReadFailureNotice } from '@/components/native-chat/messages/notices/structured-agent-session-read-failure-notice'
+import { structuredAgentSessionPaneReadFailure } from '@/components/native-chat/messages/notices/structured-agent-session-read-failure-notice'
 import { useStructuredAgentSessionDeliveryNotices } from '@/components/native-chat/session/structured/delivery/use-structured-agent-session-delivery-notices'
 import { dispatchWasWithdrawn } from '../../../../shared/agent-session/requests/structured-agent-session-dispatch-rejection'
 import { useNativeChatHostOutage } from '@/components/native-chat/host-access/use-native-chat-host-outage'
@@ -146,11 +147,7 @@ export function NativeChatStructuredSession(props: Omit<NativeChatStructuredView
     startFailures,
     agentName: agentLabel
   })
-  // A lost contact is the host notice's to say; the read adds only a refusal the host sent.
-  const readFailure =
-    controller.status === 'error' && !(hostOutage && !controller.readRefusal)
-      ? structuredAgentSessionReadFailureNotice(controller.readRefusal)
-      : null
+  const readFailure = structuredAgentSessionPaneReadFailure(controller, hostOutage)
   // Final read refusal replaces the pane because no existing action can succeed.
   const viewState = selectNativeChatViewState(session, { readRetries: readFailure?.final !== true })
   const imageRuntimeContext = useNativeChatImageRuntimeContext(props.tabId)
@@ -388,6 +385,7 @@ export function NativeChatStructuredSession(props: Omit<NativeChatStructuredView
                 />
               )}
               {subagents.statusBar}
+              <NativeChatVoiceStrips chat={controller} promptKind={prompt?.body.kind} />
               {composerShown ? (
                 <NativeChatComposer
                   ref={composerRef}

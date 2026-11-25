@@ -9,6 +9,11 @@ import type { StructuredAgentSessionCommandOutcome } from '../../../../../../sha
 import type { NativeChatStructuredComposerTransport } from './native-chat-structured-composer-transport'
 import type { NativeChatComposerImageAttachment } from '../../attachments/chips/native-chat-image-attachment'
 import type { StructuredAgentSessionSendRequest } from '../../session/structured/delivery/structured-agent-session-send-slot'
+import {
+  withSpokenReplyRequest,
+  withoutSpokenReplyRequest
+} from '../../../../../../shared/native-chat/spoken-replies/spoken-reply-request'
+import { spokenReplyRequestedFor } from '../../voice/spoken-replies/spoken-reply-mode'
 
 export async function dispatchNativeChatStructuredComposerText(
   transport: NativeChatStructuredComposerTransport,
@@ -22,21 +27,25 @@ export async function dispatchNativeChatStructuredComposerText(
   onPending?: () => void
 ): Promise<Omit<StructuredAgentSessionCommandOutcome, 'handled'> & { revealsTranscript: boolean }> {
   // Number image chips by their attachment order in this message.
-  const prompt = imageReferencesToPromptMarkers(
+  const written = imageReferencesToPromptMarkers(
     draftText,
     attachments.map((attachment) => attachment.id)
   )
   const pickedModeSkill =
-    agentSessionInteractionCommand('codex', prompt) !== null &&
-    skills.some((skill) => prompt.trimEnd() === `/${skill.name}`)
+    agentSessionInteractionCommand('codex', written) !== null &&
+    skills.some((skill) => written.trimEnd() === `/${skill.name}`)
   // A sent command releases the draft now, as a pending message does; a refusal hands it back.
   const { handled, ...command } = pickedModeSkill
     ? { handled: false, accepted: false, error: null }
-    : await transport.dispatchCommand(prompt, onPending)
+    : await transport.dispatchCommand(written, onPending)
   // Commands already reveal at keypress; messages reveal unless admitted as queued cards.
   if (handled) {
     return { ...command, revealsTranscript: false }
   }
+  // A returned draft may still carry the note; it goes out once, and only while the mode is on.
+  const prompt = spokenReplyRequestedFor(transport.sessionId)
+    ? withSpokenReplyRequest(written)
+    : withoutSpokenReplyRequest(written)
   // The composer still owns its draft until admission, so refusal must precede the handoff.
   const body = structuredAgentSessionSendBody(
     prompt,

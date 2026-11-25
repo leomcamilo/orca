@@ -1,6 +1,14 @@
 import type { SecretAtRestProtection } from '../../../shared/secure-storage/secret-at-rest-protection'
 import type { DictationCleanupResult } from '../../../shared/speech/dictation/dictation-cleanup'
 import type {
+  ElevenLabsVoiceListing,
+  OpenAiCompatibleSpeechVoiceProvider,
+  OpenAiCompatibleSpeechVoiceProviderSummary,
+  SpeechSynthesisRequest,
+  SpeechSynthesisResult,
+  SpeechSynthesisUsage
+} from '../../../shared/speech-synthesis'
+import type {
   DictationContext,
   OpenAiCompatibleSpeechProvider,
   OpenAiCompatibleSpeechProviderSummary,
@@ -46,6 +54,22 @@ export type SpeechApi = {
     requestId: string
   ) => Promise<DictationCleanupResult>
   cancelDictationCleanup?: (requestId: string) => Promise<void>
+  /** One spoken line from OpenAI's speech API, with the key saved for dictation. Absent in the
+   *  web client. */
+  synthesizeSpeech?: (request: SpeechSynthesisRequest) => Promise<SpeechSynthesisResult>
+  cancelSpeechSynthesis?: (requestId: string) => Promise<void>
+  getSpeechSynthesisUsage?: () => Promise<SpeechSynthesisUsage>
+  getElevenLabsKeyStatus?: () => Promise<{ configured: boolean }>
+  /** Never returns the saved key. */
+  saveElevenLabsApiKey?: (apiKey: string) => Promise<{ configured: boolean }>
+  clearElevenLabsApiKey?: () => Promise<{ configured: boolean }>
+  listElevenLabsVoices?: () => Promise<ElevenLabsVoiceListing>
+  getOpenAiCompatibleSpeechVoice?: () => Promise<OpenAiCompatibleSpeechVoiceProviderSummary | null>
+  /** A blank key keeps the saved one while the base URL is unchanged. */
+  saveOpenAiCompatibleSpeechVoice?: (
+    provider: OpenAiCompatibleSpeechVoiceProvider
+  ) => Promise<OpenAiCompatibleSpeechVoiceProviderSummary | null>
+  clearOpenAiCompatibleSpeechVoice?: () => Promise<void>
   onPartialTranscript: (callback: (data: SpeechTranscriptEvent) => void) => () => void
   onFinalTranscript: (callback: (data: SpeechTranscriptEvent) => void) => () => void
   onSpeechPending: (callback: (data: SpeechPendingEvent) => void) => () => void

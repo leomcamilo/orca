@@ -10,6 +10,7 @@ import {
 } from './updater-state'
 import { UpdaterCheckFailure } from './updater-check-failure'
 import { getDelayedUpdateWakeDelayMs } from '../releases/updater-release-delay'
+import { isOrcaLeoVersion } from '../../../shared/orca-leo/orca-leo-distribution'
 
 export abstract class UpdaterScheduling extends UpdaterCheckFailure {
   protected getAutomaticRetryInterval(): number {
@@ -75,7 +76,7 @@ export abstract class UpdaterScheduling extends UpdaterCheckFailure {
     ) {
       return false
     }
-    if (!app.isPackaged) {
+    if (!app.isPackaged || isOrcaLeoVersion(app.getVersion())) {
       this.sendStatus({ state: 'not-available' })
       return false
     }

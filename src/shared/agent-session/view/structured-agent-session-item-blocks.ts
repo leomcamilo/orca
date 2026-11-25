@@ -1,3 +1,4 @@
+import { blocksWithoutSpokenReplyRequest } from '../../native-chat/spoken-replies/spoken-reply-request'
 import type { AgentJournalRenderItem } from '../journal/agent-session-journal-types'
 import type { NativeChatBlock, NativeChatMessage } from '../../native-chat/native-chat-types'
 import { agentJournalToolCallLifecycle } from '../journal/agent-journal-tool-call-lifecycle'
@@ -29,7 +30,8 @@ export function itemBlocks(item: AgentJournalRenderItem): {
 } | null {
   const body = item.body
   if (body.kind === 'message') {
-    return { role: body.role, ...connectorMessageShown(body) }
+    const shown = connectorMessageShown(body)
+    return { role: body.role, ...shown, blocks: blocksWithoutSpokenReplyRequest(shown.blocks) }
   }
   if (isStructuredAgentSessionToolAction(body)) {
     const call = structuredAgentSessionToolCallBlock(body, item.itemId)

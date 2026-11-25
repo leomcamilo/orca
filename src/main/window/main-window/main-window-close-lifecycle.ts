@@ -13,6 +13,10 @@ import {
   settleRendererPreparationBeforeClose,
   setWindowCloseInFlight
 } from '../renderer-relays/native-unload-coordinator'
+import {
+  ORCA_LEO_DISTRIBUTION,
+  withOrcaLeoName
+} from '../../../shared/orca-leo/orca-leo-distribution'
 
 export function installMainWindowCloseLifecycle(args: {
   focus: MainWindowFocusLifecycle
@@ -117,10 +121,9 @@ export function installMainWindowCloseLifecycle(args: {
     if (nativeSettings.getUI().trayMinimizeNoticeShown !== true) {
       try {
         new Notification({
-          title: 'Orca',
-          body: translateMain(
-            'tray.minimizeNotice.body',
-            'Orca is still running in the system tray'
+          title: ORCA_LEO_DISTRIBUTION.displayName,
+          body: withOrcaLeoName(
+            translateMain('tray.minimizeNotice.body', 'Orca is still running in the system tray')
           )
         }).show()
       } catch {

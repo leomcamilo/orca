@@ -156,3 +156,10 @@ export async function clearOpenAiSpeechApiKey(): Promise<void> {
     await rm(getOpenAiKeyPath(), { force: true })
   })
 }
+
+export async function readOpenAiSpeechApiKeyAsync(): Promise<string | null> {
+  if (!(await credentialFileExists(getOpenAiKeyPath()))) {
+    return null
+  }
+  return readOpenAiSpeechApiKey()
+}

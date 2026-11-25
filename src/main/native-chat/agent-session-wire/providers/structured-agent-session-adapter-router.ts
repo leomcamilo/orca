@@ -1,3 +1,4 @@
+import { routeVoiceConversation } from './structured-agent-session-voice-route'
 import type { StructuredAgentSessionAtRestCommands } from '../options/structured-agent-session-at-rest-commands'
 import type { AgentChatPermissionChoice } from '../../../../shared/agent-launch/permissions/agent-chat-permission-mode'
 import type { AgentSessionJournalIdentity } from '../../../../shared/agent-session/journal/agent-session-journal-identity'
@@ -150,6 +151,11 @@ export class StructuredAgentSessionAdapterRouter implements Adapter {
     this.liveOwnerOrNull(sessionId)?.holdsDispatch?.(sessionId) ?? false
 
   confirmIdle = (id: string) => this.liveOwnerOrNull(id)?.confirmIdle?.(id)
+
+  startVoiceConversation = routeVoiceConversation((id) => this.liveOwnerOrNull(id))
+
+  listVoiceConversationVoices = async (sessionId: string): Promise<string[] | null> =>
+    (await this.liveOwnerOrNull(sessionId)?.listVoiceConversationVoices?.(sessionId)) ?? null
 
   liveTurnId = (sessionId: string): string | null | undefined =>
     this.liveOwnerOrNull(sessionId)?.liveTurnId?.(sessionId)

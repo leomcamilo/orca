@@ -1,0 +1,127 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { setMainHttpClient } from '../network/http-client'
+import { listElevenLabsVoices, synthesizeElevenLabsSpeech } from './elevenlabs-speech'
+
+vi.mock('./voice-credential-store', () => ({
+  createVoiceCredentialStore: () => ({
+    has: () => true,
+    read: () => 'xi-test-secret-key',
+    save: () => {},
+    clear: () => {}
+  })
+}))
+
+type Sent = { url: string; init: RequestInit }
+
+function answer(respond: () => Response): Sent[] {
+  const sent: Sent[] = []
+  setMainHttpClient({
+    fetch: async (url, init = {}) => {
+      sent.push({ url, init })
+      return respond()
+    },
+    proxySession: () => null
+  })
+  return sent
+}
+
+afterEach(() => setMainHttpClient(null))
+
+const LINE = { text: 'Tudo certo.', voice: 'EXAVITQu4vr4xnSDxMaL', model: 'eleven_flash_v2_5' }
+
+describe('synthesizeElevenLabsSpeech', () => {
+  it('asks ElevenLabs for the voice and model, with the key in its own header', async () => {
+    const sent = answer(() => new Response(new Uint8Array([73, 68, 51])))
+    expect(await synthesizeElevenLabsSpeech(LINE, new AbortController().signal)).toEqual({
+      ok: true,
+      audio: new Uint8Array([73, 68, 51])
+    })
+    expect(sent[0].url).toBe(
+      'https://api.elevenlabs.io/v1/text-to-speech/EXAVITQu4vr4xnSDxMaL?output_format=mp3_44100_128'
+    )
+    expect(sent[0].init.headers).toMatchObject({ 'xi-api-key': 'xi-test-secret-key' })
+    expect(JSON.parse(String(sent[0].init.body))).toEqual({
+      text: 'Tudo certo.',
+      model_id: 'eleven_flash_v2_5'
+    })
+  })
+
+  it('names an account out of credit, and sends nothing for a voice id that is not one', async () => {
+    answer(
+      () => new Response(JSON.stringify({ detail: { status: 'quota_exceeded' } }), { status: 401 })
+    )
+    expect(await synthesizeElevenLabsSpeech(LINE, new AbortController().signal)).toMatchObject({
+      ok: false,
+      failure: 'quota'
+    })
+    const sent = answer(() => new Response(new Uint8Array([1])))
+    expect(
+      await synthesizeElevenLabsSpeech(
+        { ...LINE, voice: '../v1/user' },
+        new AbortController().signal
+      )
+    ).toMatchObject({ ok: false, failure: 'refused' })
+    expect(sent).toHaveLength(0)
+  })
+
+  it('names what the account lacks by the error code, before the HTTP status', async () => {
+    const said = (detail: { code: string; message?: string }, status: number) =>
+      answer(() => new Response(JSON.stringify({ detail }), { status }))
+    const signal = new AbortController().signal
+    said(
+      {
+        code: 'paid_plan_required',
+        message: 'Free users cannot use library voices via the API.'
+      },
+      402
+    )
+    expect(await synthesizeElevenLabsSpeech(LINE, signal)).toMatchObject({
+      ok: false,
+      failure: 'paid-plan'
+    })
+    said({ code: 'voice_not_found' }, 404)
+    expect(await synthesizeElevenLabsSpeech(LINE, signal)).toMatchObject({
+      ok: false,
+      failure: 'voice-not-found'
+    })
+    said({ code: 'insufficient_permissions' }, 403)
+    expect(await synthesizeElevenLabsSpeech(LINE, signal)).toMatchObject({
+      ok: false,
+      failure: 'missing-permission'
+    })
+  })
+})
+
+describe('listElevenLabsVoices', () => {
+  it('says when the key is not allowed to list voices', async () => {
+    answer(
+      () =>
+        new Response(
+          JSON.stringify({
+            detail: {
+              status: 'missing_permissions',
+              message:
+                'The API key you used is missing the permission voices_read to execute this operation.'
+            }
+          }),
+          { status: 401 }
+        )
+    )
+    expect(await listElevenLabsVoices()).toMatchObject({ ok: false, failure: 'missing-permission' })
+  })
+
+  it('lists the account voices by name', async () => {
+    answer(
+      () =>
+        new Response(
+          JSON.stringify({
+            voices: [{ voice_id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah' }, { name: 'no id' }]
+          })
+        )
+    )
+    expect(await listElevenLabsVoices()).toEqual({
+      ok: true,
+      voices: [{ id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah' }]
+    })
+  })
+})

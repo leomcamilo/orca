@@ -30,11 +30,8 @@ import { sameTeamUpdateRestartScope } from './team-update-restart-record'
 import { configureMacShipItScheduling } from '../mac-install/macos-shipit-scheduling'
 import { handleElectronUpdaterProxyLogin } from './electron-updater-proxy-session'
 import { resolveWindowsUpdateInstallDirectory } from './windows-update-install-directory'
-import type {
-  PreQuitCleanupFailureMode,
-  UpdateInstallMode,
-  UpdateInstallTrigger
-} from './updater-state'
+import type * as UpdateState from './updater-state'
+import { isOrcaLeoVersion } from '../../../shared/orca-leo/orca-leo-distribution'
 
 export type UpdaterSetupOptions = {
   getMainWindow?: () => BrowserWindow | null
@@ -51,8 +48,8 @@ export type UpdaterSetupOptions = {
   teamRestart?: TeamRestartOptions
   getUpdateDelayDays?: () => number
   getAutomaticUpdates?: () => boolean
-  installMode?: UpdateInstallMode
-  onBeforeQuitFailure?: PreQuitCleanupFailureMode
+  installMode?: UpdateState.UpdateInstallMode
+  onBeforeQuitFailure?: UpdateState.PreQuitCleanupFailureMode
 }
 
 export class UpdaterSetup extends UpdaterDownloadInstall {
@@ -77,7 +74,7 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
   }
 
   override quitAndInstall(
-    trigger: UpdateInstallTrigger = 'manual',
+    trigger: UpdateState.UpdateInstallTrigger = 'manual',
     isCurrentTeamRestart?: () => boolean
   ): void {
     super.quitAndInstall(trigger, isCurrentTeamRestart)
@@ -114,7 +111,7 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
     return super.installRemoteServerUpdate(runtimeId)
   }
 
-  resolveUpdateInstallMode(isServeMode: boolean): UpdateInstallMode {
+  resolveUpdateInstallMode(isServeMode: boolean): UpdateState.UpdateInstallMode {
     return super.resolveUpdateInstallMode(isServeMode)
   }
 
@@ -170,7 +167,7 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
       this.sendErrorStatus(`The server update did not complete: ${serveHandoffFailure}`, true)
     }
 
-    if (!app.isPackaged) {
+    if (!app.isPackaged || isOrcaLeoVersion(app.getVersion())) {
       return
     }
 

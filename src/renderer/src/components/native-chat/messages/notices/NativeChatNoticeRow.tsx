@@ -2,6 +2,8 @@ import { NativeChatGoalCheckNotice } from './NativeChatGoalCheckNotice'
 import { BotTidyUpLine } from '@/components/bots/BotTidyUpLine'
 import { nativeChatBotCard } from '../../native-chat-bot-cards'
 import * as Fallback from '../../../../../../shared/native-chat/transcript/notices/claude-model-fallback'
+import { nativeChatVoiceTranscriptSpeaker } from '../../../../../../shared/native-chat/native-chat-voice-transcript'
+import { NativeChatVoiceTranscriptLine } from '../../voice/NativeChatVoiceTranscriptLine'
 import { NativeChatUsageLimitRow } from '../../usage/NativeChatUsageLimitRow'
 import { agentSessionGoalControlWords } from '../../session/goals/agent-session-goal-control-words'
 import { AlertCircle, AlertTriangle, Info, Notebook } from 'lucide-react'
@@ -17,10 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { translate } from '@/i18n/i18n'
 import { useTranslate } from '@/i18n/use-translate'
 import { cn } from '@/lib/class-names'
-import {
-  AGENT_SESSION_HOST_STATUS_COPY as HOST_STATUS_COPY,
-  type AgentSessionHostStatusPresentation
-} from '../../../../../../shared/agent-session/view/agent-session-host-status-rows'
+import * as HostStatus from '../../../../../../shared/agent-session/view/agent-session-host-status-rows'
 import type { NativeChatTextBlock } from '../../../../../../shared/native-chat/native-chat-types'
 import {
   NATIVE_CHAT_NOTICE_COPY,
@@ -32,19 +31,12 @@ import { NativeChatInterruptedContinueButton } from '../../usage/NativeChatInter
 import { nativeChatOrcaStopRowText } from '../../../../../../shared/native-chat/transcript/continuation/native-chat-orca-stop-words'
 import { sayNativeChatOrcaStopTranslated } from './native-chat-orca-stop-words-text'
 import { openBotSettings } from '@/components/bots/bot-settings-open'
-import {
-  BOT_CONTEXT_NOTE_COPY,
-  type BotContextChange
-} from '../../../../../../shared/bots/bot-context-note'
+import * as BotContext from '../../../../../../shared/bots/bot-context-note'
 import { NativeChatDividerRow } from '../../NativeChatDividerRow'
 import { agentSessionRestartNoteText } from './agent-session-restart-note-text'
 import * as Details from '../diagnostics/NativeChatProviderDetails'
 import { NativeChatSetupButton } from '../../host-access/NativeChatSetupButton'
-import {
-  isNativeChatFailureRowResolved,
-  isNativeChatSetupFailureKind,
-  useNativeChatHostSetupView
-} from '../../host-access/native-chat-host-setup'
+import * as HostSetup from '../../host-access/native-chat-host-setup'
 import { agentSessionFailureDetailText } from '../../../../../../shared/agent-session/failures/agent-session-failure-quoted-detail'
 import { readWholeAgentSessionFailureFact } from '../../../../../../shared/agent-session/failures/agent-session-failure'
 import { agentSessionFailureSentence } from '../../../../../../shared/agent-session/failures/agent-session-failure-words'
@@ -59,32 +51,34 @@ import { nativeChatSignInHostWords } from '../../host-access/native-chat-sign-in
 import { NativeChatNoticeAuthRecovery } from '../../antigravity-auth/NativeChatAntigravityAuthRecovery'
 import { NATIVE_CHAT_GOAL_CHECK_SUMMARY } from '../../../../../../shared/native-chat/transcript/turns/native-chat-thread-goal-rows'
 
-const HOST_STATUS_WORDS: Record<AgentSessionHostStatusPresentation, () => string> = {
+const HOST_STATUS_WORDS: Record<HostStatus.AgentSessionHostStatusPresentation, () => string> = {
   'history-repaired': () =>
     translate(
       'components.native-chat.notices.historyRepaired',
-      HOST_STATUS_COPY['history-repaired']
+      HostStatus.AGENT_SESSION_HOST_STATUS_COPY['history-repaired']
     ),
   'history-item-too-large': () =>
     translate(
       'components.native-chat.notices.historyItemTooLarge',
-      HOST_STATUS_COPY['history-item-too-large']
+      HostStatus.AGENT_SESSION_HOST_STATUS_COPY['history-item-too-large']
     ),
   'continued-outside': () =>
     translate(
       'components.native-chat.notices.continuedOutside',
-      HOST_STATUS_COPY['continued-outside']
+      HostStatus.AGENT_SESSION_HOST_STATUS_COPY['continued-outside']
     ),
   'continued-outside-rewound': () =>
     translate(
       'components.native-chat.notices.continuedOutsideRewound',
-      HOST_STATUS_COPY['continued-outside-rewound']
+      HostStatus.AGENT_SESSION_HOST_STATUS_COPY['continued-outside-rewound']
     )
 }
 
-const BOT_CONTEXT_WORDS: Record<BotContextChange, () => string> = {
-  soul: () => translate('components.native-chat.botContext.soul', BOT_CONTEXT_NOTE_COPY.soul),
-  memory: () => translate('components.native-chat.botContext.memory', BOT_CONTEXT_NOTE_COPY.memory)
+const BOT_CONTEXT_WORDS: Record<BotContext.BotContextChange, () => string> = {
+  soul: () =>
+    translate('components.native-chat.botContext.soul', BotContext.BOT_CONTEXT_NOTE_COPY.soul),
+  memory: () =>
+    translate('components.native-chat.botContext.memory', BotContext.BOT_CONTEXT_NOTE_COPY.memory)
 }
 
 function toneClass(tone: NativeChatNoticeTone): string {
@@ -119,6 +113,10 @@ export function NativeChatNoticeRow({
     return (
       <NativeChatPullRequestEventLine block={block} messageId={messageId} timestamp={timestamp} />
     )
+  }
+  const voiceSpeaker = nativeChatVoiceTranscriptSpeaker(block.presentation)
+  if (voiceSpeaker) {
+    return <NativeChatVoiceTranscriptLine speaker={voiceSpeaker} text={block.text} />
   }
   const look = nativeChatNoticeLook(block)
   if (look.kind === 'forked-from') {
@@ -398,7 +396,7 @@ export function NativeChatNoticeRow({
     )
   }
   // Only setup failures read the setup context, so other rows skip its changes.
-  return isNativeChatSetupFailureKind(block.failure?.kind) ? (
+  return HostSetup.isNativeChatSetupFailureKind(block.failure?.kind) ? (
     <NativeChatSetupFailureRow rowId={messageId} row={row} />
   ) : (
     row(false)
@@ -413,5 +411,7 @@ function NativeChatSetupFailureRow({
   rowId: string | undefined
   row: (resolved: boolean) => React.JSX.Element
 }): React.JSX.Element {
-  return row(isNativeChatFailureRowResolved(useNativeChatHostSetupView(), rowId))
+  return row(
+    HostSetup.isNativeChatFailureRowResolved(HostSetup.useNativeChatHostSetupView(), rowId)
+  )
 }

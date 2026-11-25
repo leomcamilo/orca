@@ -26,6 +26,7 @@ export type WorkerThreadRole =
   | 'orca-row-cache-checkpoint'
   | 'orca-session-search'
   | 'orca-usage-scan'
+  | 'orca-voice-credential-file'
   | 'orca-warp-theme-parser'
   | 'orca-workspace-space-scan'
   | 'orcad-event-loop-watchdog'
