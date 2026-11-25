@@ -152,6 +152,9 @@ export const AGENT_SESSION_PR_EVENTS_RUNTIME_CAPABILITY = 'agent-session.pr-even
 
 // The host relays Codex's thread-scoped realtime voice (agentSession.voiceConversation); older hosts lack the method.
 export const AGENT_SESSION_CODEX_VOICE_RUNTIME_CAPABILITY = 'agent-session.codex-voice.v1' as const
+// Why: hosts before this advertise codex-voice.v1 but refuse agentSession.voiceConversation from a phone.
+export const AGENT_SESSION_PHONE_CODEX_VOICE_RUNTIME_CAPABILITY =
+  'agent-session.codex-voice.phone.v1' as const
 
 // Individual client flags must not retain the unused host capability aggregate.
 export const AGENT_SESSION_RUNTIME_CAPABILITIES = /* @__PURE__ */ (() =>
@@ -210,6 +213,7 @@ export const AGENT_SESSION_RUNTIME_CAPABILITIES = /* @__PURE__ */ (() =>
     AGENT_SESSION_BACKGROUND_TASK_CHILD_VIEWS_CAPABILITY,
     AGENT_SESSION_PR_EVENTS_RUNTIME_CAPABILITY,
     AGENT_SESSION_CODEX_VOICE_RUNTIME_CAPABILITY,
+    AGENT_SESSION_PHONE_CODEX_VOICE_RUNTIME_CAPABILITY,
     AGENT_SESSION_TEXT_APPEND_RUNTIME_CAPABILITY,
     AGENT_SESSION_TOOL_OUTPUT_APPEND_RUNTIME_CAPABILITY,
     AGENT_SESSION_PROMPT_SUGGESTIONS_RUNTIME_CAPABILITY,

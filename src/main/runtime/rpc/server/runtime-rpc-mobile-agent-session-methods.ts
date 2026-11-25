@@ -47,6 +47,9 @@ export const MOBILE_AGENT_SESSION_RPC_METHODS = [
   'agentSession.sendRecorded',
   // "Rewind to here"; phones offer it only where AGENT_SESSION_PHONE_REWIND_RUNTIME_CAPABILITY says so.
   'agentSession.rewind',
+  // Codex Voice mode on the phone, which owns the media; phones gate on agent-session.codex-voice.phone.v1.
+  'agentSession.codexVoices',
+  'agentSession.voiceConversation',
   // History's interrupted-chats banner and its Resume all; phones gate on agent-session.restart-resume.phone.v1.
   'agentSession.restartResumable',
   'agentSession.restartContinue',
