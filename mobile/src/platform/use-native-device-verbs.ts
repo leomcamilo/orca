@@ -14,6 +14,8 @@ import { serveNativeAnnounceVerb } from './accessibility/native-accessibility-an
 import { serveNativeLinkOpenVerb } from './external-links/native-link-open-verb'
 import { createNativeMediaVerbServer } from './media-picking/native-media'
 import { discardStagedMedia, nativeMediaDeviceDeps } from './media-picking/native-media-device'
+import { useNativeVoiceCall } from './voice/use-native-voice-call'
+import { BRIDGE_VOICE_VERB } from '../mobile-web-shell/bridge/native-capabilities/bridge-voice-verb'
 
 export type NativeDeviceVerb = Exclude<
   BridgeNativeVerb,
@@ -22,7 +24,8 @@ export type NativeDeviceVerb = Exclude<
 
 // Tie stateful audio/media handlers to the page session so replacement documents cannot inherit abandoned microphones or staged handles.
 export function useNativeDeviceVerbs(
-  sessionId: string | null
+  sessionId: string | null,
+  hostId: string
 ): (verb: NativeDeviceVerb, params: unknown) => Promise<unknown> {
   const registry = useMediaHandleRegistry({ sessionId, discard: discardStagedMedia })
   const serveMedia = useMemo(
@@ -34,6 +37,8 @@ export function useNativeDeviceVerbs(
   useEffect(() => () => audio.dispose(), [audio])
   const speech = useMemo(() => createNativeSpeechServer(nativeSpeechDeviceEngine), [sessionId])
   useEffect(() => () => speech.dispose(), [speech])
+  // Voice mode is the exception: it belongs to the host's screen, so a reloaded document keeps its call.
+  const voice = useNativeVoiceCall(hostId)
   return useMemo(
     () => (verb, params) => {
       if (verb === 'native.clipboard.write' || verb === 'native.clipboard.read') {
@@ -41,6 +46,9 @@ export function useNativeDeviceVerbs(
       }
       if (verb === 'native.speech.act') {
         return speech.serve(params)
+      }
+      if (verb === BRIDGE_VOICE_VERB) {
+        return voice(params)
       }
       if (verb === 'native.a11y.announce') {
         return Promise.resolve(serveNativeAnnounceVerb(params))
@@ -61,6 +69,6 @@ export function useNativeDeviceVerbs(
       }
       return verb.startsWith('native.audio.') ? audio.serve(verb, params) : serveMedia(verb, params)
     },
-    [audio, serveMedia, speech]
+    [audio, serveMedia, speech, voice]
   )
 }

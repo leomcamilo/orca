@@ -804,6 +804,47 @@
         "needsAuth_many": "{{count}} precisam de login"
       },
       "pasteHint": "Quando o navegador chegar a uma página que não carrega, copie o endereço e cole aqui."
+    },
+    "voice": {
+      "status": {
+        "starting": "Abrindo o microfone…",
+        "connecting": "Conectando ao Codex…",
+        "reconnecting": "Reconectando ({{attempt}}/{{max}})…",
+        "assistantSpeaking": "Codex falando",
+        "muted": "Microfone silenciado",
+        "userSpeaking": "Ouvindo você",
+        "listening": "Ouvindo"
+      },
+      "failure": {
+        "microphoneDenied": "O acesso ao microfone está desligado. Libere em Ajustes.",
+        "microphoneUnavailable": "Não deu para abrir o microfone.",
+        "timeout": "O Codex não respondeu a tempo.",
+        "busy": "A voz já está ligada neste chat em outro aparelho.",
+        "notRunning": "O agente deste chat não está rodando.",
+        "providerExited": "O Codex deste chat parou.",
+        "providerError": "A voz do Codex falhou.",
+        "unsupported": "O Orca deste computador ainda não oferece voz ao celular. Atualize o Orca Leo no Mac.",
+        "connectionLost": "A conexão caiu."
+      },
+      "output": {
+        "bluetooth": "Bluetooth",
+        "headphones": "Fones",
+        "speaker": "Alto-falante",
+        "receiver": "Fone do aparelho"
+      },
+      "caption": {
+        "you": "Você"
+      },
+      "action": {
+        "start": "Falar com o Codex",
+        "retry": "Tentar de novo",
+        "close": "Fechar",
+        "mute": "Silenciar",
+        "unmute": "Reativar",
+        "speaker": "Alto-falante",
+        "earpiece": "Fone do aparelho",
+        "end": "Encerrar"
+      }
     }
   },
   "common": {

@@ -59,7 +59,8 @@
           "UIInterfaceOrientationPortraitUpsideDown",
           "UIInterfaceOrientationLandscapeLeft",
           "UIInterfaceOrientationLandscapeRight"
-        ]
+        ],
+        "UIBackgroundModes": ["audio"]
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,

@@ -1,3 +1,4 @@
+import { useMobileCodexVoice } from '../../session/native-chat/voice/use-mobile-codex-voice'
 import { useEffect } from 'react'
 import { AppState, type AppStateStatus } from 'react-native'
 import { useClipboardReader } from '../../platform/clipboard/clipboard'
@@ -108,6 +109,11 @@ export function useMobileSessionAttachments(scope: MobileSessionAccessorySelecti
       onSuccess: triggerSelection,
       onError: triggerError
     })
+  const nativeChatVoice = useMobileCodexVoice({
+    sessionId: structuredNativeChat ? nativeChatSessionId : null,
+    codexChat: agent === 'codex',
+    hostSupportsVoice: agentSessionHostSupport?.phoneCodexVoice === true
+  })
   const nativeChatStructuredComposer = useMobileNativeChatStructuredComposer({
     structured: structuredNativeChat,
     sessionCommands: nativeChatController.nativeChatSessionCommands,
@@ -120,7 +126,8 @@ export function useMobileSessionAttachments(scope: MobileSessionAccessorySelecti
     threadGoal: nativeChatController.nativeChatThreadGoal,
     mcpPanel: nativeChatController.nativeChatMcpPanel,
     accountUsage: nativeChatController.nativeChatAccountUsage,
-    onCommandNotice: nativeChatSendError.show
+    onCommandNotice: nativeChatSendError.show,
+    voice: nativeChatVoice
   })
 
   useEffect(() => {

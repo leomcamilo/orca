@@ -4254,6 +4254,47 @@
       "always": "Always allow {{server}}",
       "deny": "Deny",
       "thisServer": "this server"
+    },
+    "voice": {
+      "status": {
+        "starting": "Opening the microphone…",
+        "connecting": "Connecting to Codex…",
+        "reconnecting": "Reconnecting ({{attempt}}/{{max}})…",
+        "assistantSpeaking": "Codex is speaking",
+        "muted": "Microphone muted",
+        "userSpeaking": "Hearing you",
+        "listening": "Listening"
+      },
+      "failure": {
+        "microphoneDenied": "Microphone access is off. Allow it in Settings.",
+        "microphoneUnavailable": "The microphone could not open.",
+        "timeout": "Codex did not answer in time.",
+        "busy": "Voice is already on in this chat on another device.",
+        "notRunning": "This chat's agent is not running.",
+        "providerExited": "This chat's Codex stopped.",
+        "providerError": "Codex voice failed.",
+        "unsupported": "This computer's Orca does not offer voice to phones yet. Update Orca Leo on the Mac.",
+        "connectionLost": "The connection dropped."
+      },
+      "output": {
+        "bluetooth": "Bluetooth",
+        "headphones": "Headphones",
+        "speaker": "Speaker",
+        "receiver": "Earpiece"
+      },
+      "caption": {
+        "you": "You"
+      },
+      "action": {
+        "start": "Talk with Codex",
+        "retry": "Try again",
+        "close": "Close",
+        "mute": "Mute",
+        "unmute": "Unmute",
+        "speaker": "Speaker",
+        "earpiece": "Earpiece",
+        "end": "End"
+      }
     }
   },
   "sourceControl": {

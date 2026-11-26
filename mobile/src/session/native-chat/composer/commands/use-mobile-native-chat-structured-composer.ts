@@ -6,6 +6,7 @@ import type { useMobileStructuredSessionCommands } from './use-mobile-structured
 import type { MobileStructuredThreadGoal } from '../../input/tasks/use-mobile-structured-thread-goal'
 import type { MobileStructuredMcpPanel } from '../../mcp/use-mobile-structured-mcp-panel'
 import type { MobileStructuredAccountUsage } from '../../usage/use-mobile-structured-account-usage'
+import type { MobileCodexVoice } from '../../voice/mobile-codex-voice-view'
 
 const NO_COMMANDS: readonly AgentSessionConversationCommand[] = []
 
@@ -21,9 +22,10 @@ export function useMobileNativeChatStructuredComposer(args: {
   mcpPanel: MobileStructuredMcpPanel | null
   accountUsage: MobileStructuredAccountUsage | null
   onCommandNotice: (message: string) => void
+  voice: MobileCodexVoice | null
 }): MobileNativeChatStructuredComposer | null {
   const { structured, acceptsFiles, compactInstructions, files, threadGoal, mcpPanel } = args
-  const { accountUsage, onCommandNotice } = args
+  const { accountUsage, onCommandNotice, voice } = args
   const conversationCommands = args.conversationCommands ?? NO_COMMANDS
   const { commands, refresh, setMenuOpen } = args.sessionCommands
   const { files: pendingFiles, attachFiles, attachPastedText, removeFiles } = files
@@ -55,7 +57,8 @@ export function useMobileNativeChatStructuredComposer(args: {
             threadGoal,
             mcpPanel,
             accountUsage,
-            onCommandNotice
+            onCommandNotice,
+            voice
           }
         : null,
     [
@@ -63,6 +66,7 @@ export function useMobileNativeChatStructuredComposer(args: {
       mcpPanel,
       accountUsage,
       onCommandNotice,
+      voice,
       acceptsFiles,
       attachFiles,
       attachPastedText,

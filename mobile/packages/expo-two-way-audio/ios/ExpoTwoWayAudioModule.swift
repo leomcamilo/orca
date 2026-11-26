@@ -122,6 +122,19 @@ public class ExpoTwoWayAudioModule: Module {
             self.audioEngine?.bypassVoiceProcessing(bypass)
         }
 
+        // A voice call's playback: the speaker unless a headset or Bluetooth device holds the route.
+        // Returns the output port type now in use, so the caller can label it.
+        Function("routeVoiceOutput") { (speaker: Bool) -> String in
+            let session = AVAudioSession.sharedInstance()
+            let external: Set<AVAudioSession.Port> = [
+                .headphones, .bluetoothA2DP, .bluetoothHFP, .bluetoothLE, .carAudio, .airPlay, .usbAudio
+            ]
+            let outputs = session.currentRoute.outputs
+            let headset = outputs.contains { external.contains($0.portType) }
+            try? session.overrideOutputAudioPort(speaker && !headset ? .speaker : .none)
+            return session.currentRoute.outputs.first?.portType.rawValue ?? ""
+        }
+
         AsyncFunction("getMicrophonePermissionsAsync") { (promise: Promise) in
             EXPermissionsMethodsDelegate.getPermissionWithPermissionsManager(
                 self.appContext?.permissions,

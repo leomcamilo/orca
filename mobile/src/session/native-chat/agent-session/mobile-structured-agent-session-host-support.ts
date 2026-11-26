@@ -22,6 +22,7 @@ import {
   AGENT_SESSION_MCP_RUNTIME_CAPABILITY,
   AGENT_SESSION_PHONE_ACCOUNT_USAGE_RUNTIME_CAPABILITY,
   AGENT_SESSION_PHONE_REWIND_RUNTIME_CAPABILITY,
+  AGENT_SESSION_PHONE_CODEX_VOICE_RUNTIME_CAPABILITY,
   AGENT_SESSION_PHONE_USAGE_LIMIT_CONTINUE_CANCEL_RUNTIME_CAPABILITY,
   AGENT_SESSION_SKIP_ASYNC_QUESTIONS_RUNTIME_CAPABILITY,
   AGENT_SESSION_QUEUED_MESSAGE_SKILLS_EDIT_RUNTIME_CAPABILITY
@@ -86,6 +87,8 @@ export type StructuredAgentSessionHostSupport = {
   phoneAccountUsage?: boolean
   /** Older hosts advertise rewind but refuse it from a phone. */
   phoneRewind?: boolean
+  /** The host relays Codex Voice mode for a phone; older hosts refuse it. */
+  phoneCodexVoice?: boolean
   /** The host continues a usage-limited chat at its reset and publishes that on the status feed. */
   usageLimitAutoContinue: boolean
   /** The host takes "Don't continue" from a phone. */
@@ -136,6 +139,7 @@ export function structuredAgentSessionHostSupport(
     mcp: capabilities.includes(AGENT_SESSION_MCP_RUNTIME_CAPABILITY),
     phoneAccountUsage: capabilities.includes(AGENT_SESSION_PHONE_ACCOUNT_USAGE_RUNTIME_CAPABILITY),
     phoneRewind: capabilities.includes(AGENT_SESSION_PHONE_REWIND_RUNTIME_CAPABILITY),
+    phoneCodexVoice: capabilities.includes(AGENT_SESSION_PHONE_CODEX_VOICE_RUNTIME_CAPABILITY),
     usageLimitAutoContinue: capabilities.includes(
       AGENT_SESSION_USAGE_LIMIT_AUTO_CONTINUE_RUNTIME_CAPABILITY
     ),

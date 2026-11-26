@@ -3,6 +3,7 @@ import type { PendingNativeChatFile } from '../attachments/mobile-native-chat-fi
 import type { MobileStructuredThreadGoal } from '../../input/tasks/use-mobile-structured-thread-goal'
 import type { MobileStructuredMcpPanel } from '../../mcp/use-mobile-structured-mcp-panel'
 import type { MobileStructuredAccountUsage } from '../../usage/use-mobile-structured-account-usage'
+import type { MobileCodexVoice } from '../../voice/mobile-codex-voice-view'
 
 export type MobileNativeChatStructuredComposer = {
   catalog: MobileComposerStructuredCatalog
@@ -22,4 +23,6 @@ export type MobileNativeChatStructuredComposer = {
   accountUsage?: MobileStructuredAccountUsage | null
   /** Why an Orca command (`/fork`, `/resume`) did not run, shown beside the composer. */
   onCommandNotice?: (message: string) => void
+  /** Null unless this is a Codex chat in an app that holds voice calls; a computer without phone voice says so. */
+  voice?: MobileCodexVoice | null
 }

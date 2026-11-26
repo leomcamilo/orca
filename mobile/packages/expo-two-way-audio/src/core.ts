@@ -40,3 +40,8 @@ export function getMicrophoneModeIOS() {
 export function setMicrophoneModeIOS() {
   return ExpoTwoWayAudioModule.setMicrophoneModeIOS()
 }
+
+/** iOS: plays a voice call on the speaker unless a headset holds the route; returns the output port type. */
+export function routeVoiceOutput(speaker: boolean): string {
+  return ExpoTwoWayAudioModule.routeVoiceOutput?.(speaker) ?? ''
+}

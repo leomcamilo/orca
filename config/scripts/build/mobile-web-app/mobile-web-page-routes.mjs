@@ -119,7 +119,7 @@ export const MOBILE_WEB_PAGE_ROUTES = [
       'native.audio.read',
       'native.audio.stop'
     ],
-    // Optional media.name falls back to the file type; terminalKeyRail falls back to the page's row; the image viewer drops its actions without native.image.act; dictation uses the computer without native.speech.act; without native.a11y.announce only the page's live region speaks; without native.link.open a link counts as opened once the shell takes it.
+    // Optional media.name falls back to the file type; terminalKeyRail falls back to the page's row; the image viewer drops its actions without native.image.act; dictation uses the computer without native.speech.act; without native.a11y.announce only the page's live region speaks; without native.link.open a link counts as opened once the shell takes it; without native.voice.call a Codex chat shows no Voice mode button, since only the app can hold the call through a locked screen.
     optionalGrants: [
       'externalNavigation',
       'native.media.name',
@@ -128,6 +128,7 @@ export const MOBILE_WEB_PAGE_ROUTES = [
       'native.speech.act',
       'native.a11y.announce',
       'native.link.open',
+      'native.voice.call',
       'terminalKeyRail',
       DEVICE_STORE_GRANT
     ]

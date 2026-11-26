@@ -39,6 +39,7 @@ import { MobileNativeChatComposerPlanChip } from './commands/MobileNativeChatCom
 import type { MobileNativeChatComposerProps } from './mobile-native-chat-composer-props'
 import { MobileNativeChatMcpTray } from '../mcp/MobileNativeChatMcpTray'
 import { MobileNativeChatQuoteTab } from './quotes/MobileNativeChatQuoteTab'
+import { MobileNativeChatVoiceControls } from '../voice/MobileNativeChatVoicePanel'
 
 const NO_FILE_PATHS: string[] = []
 const NO_ATTACHMENTS: PendingNativeChatImage[] = []
@@ -245,6 +246,7 @@ export function MobileNativeChatComposer({
   }
 
   const followUp = goal.sendFollowUp(sendFollowUp)
+  const voice = editSession ? null : structured?.voice
   const headChord = goal.holdsFollowUp ? undefined : steerHead
   const content = (
     <View ref={groupRef} testID="native-chat-composer-group">
@@ -260,6 +262,9 @@ export function MobileNativeChatComposer({
         {orca.usageSheet}
         {goal.strip}
         {editSession ? null : <MobileNativeChatQuoteTab {...{ value, onChangeText, fieldRef }} />}
+        {voice ? (
+          <MobileNativeChatVoiceControls voice={voice} disabled={disabled || offline} />
+        ) : null}
         <View {...contextRing.barProps} style={styles.bar} testID="native-chat-composer">
           <MobileNativeChatComposerAttachments
             images={attachments}
