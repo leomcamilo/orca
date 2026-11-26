@@ -38,7 +38,9 @@ export function MobileNativeChatVoiceControls({
       {view.captions.slice(-2).map((caption) => (
         <Text key={caption.id} style={styles.caption} numberOfLines={3}>
           <Text style={styles.speaker}>
-            {caption.role === 'user' ? t('chat.voice.caption.you', 'You') : 'Codex'}
+            {caption.role === 'user'
+              ? t('chat.voice.caption.you', 'You')
+              : t('chat.voice.caption.codex', 'Codex')}
             {': '}
           </Text>
           {caption.text.trim()}

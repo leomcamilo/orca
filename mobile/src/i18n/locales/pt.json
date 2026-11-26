@@ -833,7 +833,8 @@
         "receiver": "Fone do aparelho"
       },
       "caption": {
-        "you": "Você"
+        "you": "Você",
+        "codex": "Codex"
       },
       "action": {
         "start": "Falar com o Codex",

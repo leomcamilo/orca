@@ -25,7 +25,7 @@ export function mobileCodexVoiceStatusLabel(t: Translate, view: MobileCodexVoice
         : t('chat.voice.status.listening', 'Listening')
     case 'ended':
       return view.failure ? mobileCodexVoiceFailureLabel(t, view.failure.kind) : ''
-    default:
+    case 'idle':
       return ''
   }
 }
@@ -55,7 +55,8 @@ export function mobileCodexVoiceFailureLabel(t: Translate, kind: MobileCodexVoic
         'chat.voice.failure.unsupported',
         "This computer's Orca does not offer voice to phones yet. Update Orca Leo on the Mac."
       )
-    default:
+    case 'connection-lost':
+    case 'transport-closed':
       return t('chat.voice.failure.connectionLost', 'The connection dropped.')
   }
 }

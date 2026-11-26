@@ -4283,7 +4283,8 @@
         "receiver": "Earpiece"
       },
       "caption": {
-        "you": "You"
+        "you": "You",
+        "codex": "Codex"
       },
       "action": {
         "start": "Talk with Codex",
