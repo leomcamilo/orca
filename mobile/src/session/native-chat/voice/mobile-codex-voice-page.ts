@@ -1,9 +1,5 @@
 import type { BridgeVoiceResult } from '../../../mobile-web-shell/bridge/native-capabilities/bridge-voice-verb'
-import {
-  MOBILE_CODEX_VOICE_IDLE,
-  readMobileCodexVoiceFailure,
-  type MobileCodexVoiceView
-} from './mobile-codex-voice-view'
+import { MOBILE_CODEX_VOICE_IDLE, type MobileCodexVoiceView } from './mobile-codex-voice-view'
 
 /** Whether the app's call is running for this chat, so the page keeps reading it. */
 export function voiceCallRunsFor(
@@ -35,16 +31,7 @@ export function voicePageView(
       speaker: remote?.view.speaker ?? true
     }
   }
-  const { failure } = remote.view
-  return {
-    ...remote.view,
-    failure: failure
-      ? {
-          kind: readMobileCodexVoiceFailure(failure.kind),
-          ...(failure.message ? { message: failure.message } : {})
-        }
-      : null
-  }
+  return remote.view
 }
 
 /** Keeps the newest reply: a read answered late must not undo an action answered first, and a

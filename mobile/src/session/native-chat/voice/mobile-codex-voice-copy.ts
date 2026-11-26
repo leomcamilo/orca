@@ -1,5 +1,4 @@
 import type { Translate } from '../../../i18n/mobile-i18n'
-import type { MobileCodexVoiceFailure } from './mobile-codex-voice-call'
 import type { MobileCodexVoiceView } from './mobile-codex-voice-view'
 
 export function mobileCodexVoiceStatusLabel(t: Translate, view: MobileCodexVoiceView): string {
@@ -30,7 +29,7 @@ export function mobileCodexVoiceStatusLabel(t: Translate, view: MobileCodexVoice
   }
 }
 
-export function mobileCodexVoiceFailureLabel(t: Translate, kind: MobileCodexVoiceFailure): string {
+export function mobileCodexVoiceFailureLabel(t: Translate, kind: string): string {
   switch (kind) {
     case 'microphone-denied':
       return t(
@@ -55,8 +54,8 @@ export function mobileCodexVoiceFailureLabel(t: Translate, kind: MobileCodexVoic
         'chat.voice.failure.unsupported',
         "This computer's Orca does not offer voice to phones yet. Update Orca Leo on the Mac."
       )
-    case 'connection-lost':
-    case 'transport-closed':
+    // connection-lost, transport-closed and any kind a newer app names.
+    default:
       return t('chat.voice.failure.connectionLost', 'The connection dropped.')
   }
 }

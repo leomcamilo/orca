@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type { BridgeVoiceResult } from '../../../mobile-web-shell/bridge/native-capabilities/bridge-voice-verb'
 import { newerVoiceResult, voiceCallRunsFor, voicePageView } from './mobile-codex-voice-page'
 import { MOBILE_CODEX_VOICE_IDLE } from './mobile-codex-voice-view'
+import {
+  mobileCodexVoiceFailureLabel,
+  mobileCodexVoiceStatusLabel
+} from './mobile-codex-voice-copy'
 
 function result(
   revision: number,
@@ -23,7 +27,10 @@ describe('Voice mode on the session page', () => {
 
   it('reads a failure a newer app names as a dropped connection', () => {
     const ended = result(6, 'chat-1', { status: 'ended', failure: { kind: 'satellite-lost' } })
-    expect(voicePageView(ended, null, 'chat-1').failure).toEqual({ kind: 'connection-lost' })
+    const t = (_key: string, fallback: string) => fallback
+    expect(mobileCodexVoiceStatusLabel(t, voicePageView(ended, null, 'chat-1'))).toBe(
+      mobileCodexVoiceFailureLabel(t, 'connection-lost')
+    )
   })
 
   it('lets a page-only notice win over the call', () => {

@@ -57,18 +57,14 @@ export function useMobileCodexVoice(args: {
     },
     [bridge]
   )
-  const callRef = useRef(call)
-  useLayoutEffect(() => {
-    callRef.current = call
-  }, [call])
 
   const enabled = granted && codexChat && sessionId !== null
   // A document reloaded under a locked screen picks up the call the app kept.
   useEffect(() => {
     if (enabled) {
-      void callRef.current({ action: 'read' })
+      void call({ action: 'read' })
     }
-  }, [enabled, sessionId])
+  }, [call, enabled, sessionId])
 
   const running = enabled && voiceCallRunsFor(remote, sessionId)
   useEffect(() => {
@@ -79,7 +75,7 @@ export function useMobileCodexVoice(args: {
     void (async () => {
       let after = remoteRef.current?.revision ?? 0
       while (!cancelled) {
-        const next = await callRef.current({ action: 'read', after })
+        const next = await call({ action: 'read', after })
         if (!next || !voiceCallRunsFor(next, sessionId)) {
           return
         }
@@ -89,20 +85,21 @@ export function useMobileCodexVoice(args: {
     return () => {
       cancelled = true
     }
-  }, [running, sessionId])
+  }, [call, running, sessionId])
 
   // Another chat, or leaving this one, ends its call, as on the computer. A document that opens on
-  // another chat leaves a running call alone: only this page's own move away ends it.
+  // another chat leaves a running call alone: only this page's own move away ends it. `call` only
+  // changes with the page's bridge, which lives as long as the document.
   useEffect(() => {
     if (!sessionId) {
       return
     }
     return () => {
       if (voiceCallRunsFor(remoteRef.current, sessionId)) {
-        void callRef.current({ action: 'stop' })
+        void call({ action: 'stop' })
       }
     }
-  }, [sessionId])
+  }, [call, sessionId])
 
   const view = useMemo(() => voicePageView(remote, local, sessionId), [local, remote, sessionId])
   const start = useCallback(() => {
@@ -123,22 +120,25 @@ export function useMobileCodexVoice(args: {
       speaker: prefs.speaker
     })
   }, [call, executionHost, hostSupportsVoice, sessionId])
-  const stop = useCallback(() => {
-    setLocal(null)
-    void call({ action: 'stop' })
-  }, [call])
-  const setMuted = useCallback((muted: boolean) => void call({ action: 'mute', muted }), [call])
-  const setSpeaker = useCallback(
-    (speaker: boolean) => void call({ action: 'speaker', speaker }),
-    [call]
-  )
-  const dismiss = useCallback(() => {
-    setLocal(null)
-    void call({ action: 'dismiss' })
-  }, [call])
 
   return useMemo(
-    () => (enabled ? { view, start, stop, setMuted, setSpeaker, dismiss } : null),
-    [dismiss, enabled, setMuted, setSpeaker, start, stop, view]
+    () =>
+      enabled
+        ? {
+            view,
+            start,
+            stop: () => {
+              setLocal(null)
+              void call({ action: 'stop' })
+            },
+            setMuted: (muted: boolean) => void call({ action: 'mute', muted }),
+            setSpeaker: (speaker: boolean) => void call({ action: 'speaker', speaker }),
+            dismiss: () => {
+              setLocal(null)
+              void call({ action: 'dismiss' })
+            }
+          }
+        : null,
+    [call, enabled, start, view]
   )
 }

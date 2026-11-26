@@ -1,4 +1,4 @@
-import type { MobileCodexVoiceCaption, MobileCodexVoiceFailure } from './mobile-codex-voice-call'
+import type { MobileCodexVoiceCaption } from './mobile-codex-voice-call'
 import { MOBILE_CODEX_VOICE_MAX_RETRIES } from './mobile-codex-voice-retry'
 
 export const MOBILE_CODEX_VOICE_STATUSES = [
@@ -20,7 +20,8 @@ export type MobileCodexVoiceView = {
   outputPort: string
   speaking: 'user' | 'assistant' | null
   captions: readonly MobileCodexVoiceCaption[]
-  failure: { kind: MobileCodexVoiceFailure; message?: string } | null
+  /** The app's call names the kind; one this page does not know reads as a dropped connection. */
+  failure: { kind: string; message?: string } | null
   attempt: number
   maxAttempts: number
 }
@@ -45,23 +46,4 @@ export const MOBILE_CODEX_VOICE_IDLE: MobileCodexVoiceView = {
   failure: null,
   attempt: 0,
   maxAttempts: MOBILE_CODEX_VOICE_MAX_RETRIES
-}
-
-const KNOWN_FAILURES = [
-  'microphone-denied',
-  'microphone-unavailable',
-  'connect-timeout',
-  'connection-lost',
-  'provider-error',
-  'transport-closed',
-  'answer-timeout',
-  'provider-exited',
-  'busy',
-  'not-running',
-  'unsupported'
-] as const satisfies readonly MobileCodexVoiceFailure[]
-
-/** A kind from the app's call; one this page does not know reads as a dropped connection. */
-export function readMobileCodexVoiceFailure(kind: string): MobileCodexVoiceFailure {
-  return KNOWN_FAILURES.find((known) => known === kind) ?? 'connection-lost'
 }

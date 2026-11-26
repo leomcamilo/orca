@@ -198,7 +198,7 @@ export class MobileCodexVoiceController {
     this.retryAfter(state.failure)
   }
 
-  private retryAfter(failure: NonNullable<MobileCodexVoiceView['failure']>): void {
+  private retryAfter(failure: NonNullable<MobileCodexVoiceCallState['failure']>): void {
     const delay = nextMobileCodexVoiceRetry(failure.kind, this.retries, this.everLive)
     if (delay === null) {
       this.wanted = false
